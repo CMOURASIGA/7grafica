@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { garantirDadosDemo } from "@/lib/mock/reset";
 import { getRepositories } from "@/lib/repositories";
-import type { SessaoAtual } from "@/lib/repositories/types";
+import { protegerRepositories } from "@/lib/repositories/authorization";
+import type { Repositories, SessaoAtual } from "@/lib/repositories/types";
 
 type SessionContextValue = {
   carregando: boolean;
@@ -62,4 +63,16 @@ export function useSessao(): SessionContextValue {
     throw new Error("useSessao deve ser usado dentro de SessionProvider.");
   }
   return context;
+}
+
+/**
+ * Repositorios com RBAC dos Cadastros aplicado ao papel do usuario logado
+ * na empresa ativa. Use este hook (nao useRepositories) em qualquer tela
+ * que leia/escreva clientes, contatos, e-mails ou os demais cadastros
+ * mestres — a checagem de permissao acontece a cada chamada, nao so na UI.
+ */
+export function useRepositoriosAutorizados(): Repositories {
+  const { sessao } = useSessao();
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  return useMemo(() => protegerRepositories(getRepositories(), papel), [papel]);
 }

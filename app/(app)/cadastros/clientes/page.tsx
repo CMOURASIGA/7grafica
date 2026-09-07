@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { Cliente, TipoPessoa } from "@/lib/domain/entities";
 
 const TIPOS: { value: TipoPessoa; label: string }[] = [
@@ -17,19 +17,29 @@ export default function ClientesPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeAcessarClientes = papel ? papelTemPermissao(papel, PERMISSOES.CLIENTES_GERENCIAR) : false;
   const [clientes, setClientes] = useState<Cliente[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeAcessarClientes) return;
     setClientes(await repositories.clientes.listar(empresaId));
   }
 
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeAcessarClientes]);
 
   if (!empresaId) return null;
+
+  if (!podeAcessarClientes) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a clientes.</p>
+      </SurfaceCard>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

@@ -2,21 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { ConversaoUnidade, Material, UnidadeMedida } from "@/lib/domain/entities";
 
 export default function MateriaisPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeVisualizar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR) : false;
+  const podeGerenciar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_GERENCIAR) : false;
   const [unidades, setUnidades] = useState<UnidadeMedida[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [conversoes, setConversoes] = useState<ConversaoUnidade[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeVisualizar) return;
     const [listaUnidades, listaMateriais, listaConversoes] = await Promise.all([
       repositories.unidadesMedida.listar(empresaId),
       repositories.materiais.listar(empresaId),
@@ -30,9 +33,17 @@ export default function MateriaisPage() {
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeVisualizar]);
 
   if (!empresaId) return null;
+
+  if (!podeVisualizar) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a materiais.</p>
+      </SurfaceCard>
+    );
+  }
 
   const nomeUnidade = (id: string) => unidades.find((unidade) => unidade.id === id)?.sigla ?? "—";
   const opcoesUnidade = unidades.map((unidade) => ({ value: unidade.id, label: `${unidade.nome} (${unidade.sigla})` }));
@@ -48,6 +59,7 @@ export default function MateriaisPage() {
       <CrudSection<UnidadeMedida>
         titulo="Unidades de medida"
         nomeEntidade="Unidade"
+        somenteLeitura={!podeGerenciar}
         campos={[
           { name: "nome", label: "Nome", tipo: "texto", obrigatorio: true, placeholder: "Ex.: Resma" },
           { name: "sigla", label: "Sigla", tipo: "texto", obrigatorio: true, placeholder: "Ex.: rm" },
@@ -75,6 +87,7 @@ export default function MateriaisPage() {
       <CrudSection<Material>
         titulo="Materiais"
         nomeEntidade="Material"
+        somenteLeitura={!podeGerenciar}
         campos={[
           { name: "nome", label: "Nome", tipo: "texto", obrigatorio: true },
           { name: "unidadeCompraId", label: "Unidade de compra", tipo: "select", obrigatorio: true, opcoes: opcoesUnidade },
@@ -123,6 +136,7 @@ export default function MateriaisPage() {
         titulo="Conversoes de unidade"
         descricao="Quantas unidades de consumo equivalem a 1 unidade de compra de cada material."
         nomeEntidade="Conversao"
+        somenteLeitura={!podeGerenciar}
         campos={[
           {
             name: "materialId",

@@ -4,8 +4,8 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { CrudSection } from "@/components/cadastros/crud-section";
 import { PageIntro, StatusPill, SurfaceCard } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { Cliente, Contato, EmailContato } from "@/lib/domain/entities";
 
 export default function ClienteDetalhePage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +13,8 @@ export default function ClienteDetalhePage({ params }: { params: Promise<{ id: s
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeAcessarClientes = papel ? papelTemPermissao(papel, PERMISSOES.CLIENTES_GERENCIAR) : false;
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [contatos, setContatos] = useState<Contato[]>([]);
@@ -20,6 +22,10 @@ export default function ClienteDetalhePage({ params }: { params: Promise<{ id: s
   const [carregando, setCarregando] = useState(true);
 
   async function recarregar() {
+    if (!podeAcessarClientes) {
+      setCarregando(false);
+      return;
+    }
     const [clienteAtual, listaContatos] = await Promise.all([
       repositories.clientes.obter(id),
       repositories.contatos.listarPorCliente(id),
@@ -34,9 +40,17 @@ export default function ClienteDetalhePage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, podeAcessarClientes]);
 
   if (carregando) return null;
+
+  if (!podeAcessarClientes) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a clientes.</p>
+      </SurfaceCard>
+    );
+  }
 
   if (!cliente || !empresaId) {
     return (

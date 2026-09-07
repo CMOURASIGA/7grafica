@@ -3,8 +3,7 @@
 import { useTransition } from "react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { PAPEL_LABEL } from "@/lib/rbac";
 import type { Papel } from "@/lib/domain/entities";
 import type { VinculoComPerfil } from "@/lib/repositories/types";

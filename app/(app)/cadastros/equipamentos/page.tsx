@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { CapacidadeEquipamento, Equipamento, TipoEquipamento } from "@/lib/domain/entities";
 
 const TIPOS: { value: TipoEquipamento; label: string }[] = [
@@ -25,11 +25,14 @@ export default function EquipamentosPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeVisualizar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR) : false;
+  const podeGerenciar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_GERENCIAR) : false;
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [capacidades, setCapacidades] = useState<CapacidadeEquipamento[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeVisualizar) return;
     const [listaEquipamentos, listaCapacidades] = await Promise.all([
       repositories.equipamentos.listar(empresaId),
       repositories.capacidadesEquipamento.listar(empresaId),
@@ -41,9 +44,17 @@ export default function EquipamentosPage() {
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeVisualizar]);
 
   if (!empresaId) return null;
+
+  if (!podeVisualizar) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a equipamentos.</p>
+      </SurfaceCard>
+    );
+  }
 
   const nomeEquipamento = (id: string) => equipamentos.find((equip) => equip.id === id)?.nome ?? "—";
 
@@ -54,6 +65,7 @@ export default function EquipamentosPage() {
       <CrudSection<Equipamento>
         titulo="Equipamentos"
         nomeEntidade="Equipamento"
+        somenteLeitura={!podeGerenciar}
         campos={[
           { name: "nome", label: "Nome", tipo: "texto", obrigatorio: true },
           { name: "tipo", label: "Tipo", tipo: "select", obrigatorio: true, opcoes: TIPOS },
@@ -93,6 +105,7 @@ export default function EquipamentosPage() {
         titulo="Capacidades tecnicas"
         descricao="Formatos, cor/P&B e duplex suportados por cada equipamento."
         nomeEntidade="Capacidade"
+        somenteLeitura={!podeGerenciar}
         campos={[
           {
             name: "equipamentoId",

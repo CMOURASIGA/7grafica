@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { useToast } from "@/components/ui/toast";
 import type { Empresa } from "@/lib/domain/entities";
 

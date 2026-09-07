@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { FormaPagamento } from "@/lib/domain/entities";
 
 const CAMPOS = [
@@ -16,19 +16,30 @@ export default function FormasPagamentoPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeVisualizar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR) : false;
+  const podeGerenciar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_GERENCIAR) : false;
   const [itens, setItens] = useState<FormaPagamento[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeVisualizar) return;
     setItens(await repositories.formasPagamento.listar(empresaId));
   }
 
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeVisualizar]);
 
   if (!empresaId) return null;
+
+  if (!podeVisualizar) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a formas de pagamento.</p>
+      </SurfaceCard>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -36,6 +47,7 @@ export default function FormasPagamentoPage() {
       <CrudSection<FormaPagamento>
         titulo="Formas de pagamento cadastradas"
         nomeEntidade="Forma de pagamento"
+        somenteLeitura={!podeGerenciar}
         campos={CAMPOS}
         itens={itens}
         colunas={[

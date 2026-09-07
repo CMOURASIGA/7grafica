@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { CategoriaServico, EtapaWorkflow, TipoEtapa, Workflow } from "@/lib/domain/entities";
 
 const TIPOS_ETAPA: { value: TipoEtapa; label: string }[] = [
@@ -17,12 +17,15 @@ export default function WorkflowsPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeVisualizar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR) : false;
+  const podeGerenciar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_GERENCIAR) : false;
   const [categorias, setCategorias] = useState<CategoriaServico[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [etapas, setEtapas] = useState<EtapaWorkflow[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeVisualizar) return;
     const [listaCategorias, listaWorkflows, listaEtapas] = await Promise.all([
       repositories.categoriasServico.listar(empresaId),
       repositories.workflows.listar(empresaId),
@@ -36,9 +39,17 @@ export default function WorkflowsPage() {
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeVisualizar]);
 
   if (!empresaId) return null;
+
+  if (!podeVisualizar) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a workflows.</p>
+      </SurfaceCard>
+    );
+  }
 
   const nomeWorkflow = (id: string) => workflows.find((workflow) => workflow.id === id)?.nome ?? "—";
 
@@ -53,6 +64,7 @@ export default function WorkflowsPage() {
       <CrudSection<Workflow>
         titulo="Workflows"
         nomeEntidade="Workflow"
+        somenteLeitura={!podeGerenciar}
         campos={[
           { name: "nome", label: "Nome", tipo: "texto", obrigatorio: true },
           {
@@ -101,6 +113,7 @@ export default function WorkflowsPage() {
         titulo="Etapas"
         descricao="Ordem de execucao de cada workflow."
         nomeEntidade="Etapa"
+        somenteLeitura={!podeGerenciar}
         campos={[
           {
             name: "workflowId",

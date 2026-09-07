@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { EventoAuditoria } from "@/lib/domain/entities";
 

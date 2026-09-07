@@ -2,20 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { CrudSection } from "@/components/cadastros/crud-section";
-import { PageIntro } from "@/components/ui/workspace-primitives";
-import { useSessao } from "@/components/providers/session-provider";
-import { useRepositories } from "@/lib/repositories";
+import { PageIntro, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
 import type { CategoriaServico, Servico } from "@/lib/domain/entities";
 
 export default function ServicosPage() {
   const repositories = useRepositories();
   const { sessao } = useSessao();
   const empresaId = sessao?.empresaAtiva?.id;
+  const papel = sessao?.empresaAtiva?.papel ?? null;
+  const podeVisualizar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR) : false;
+  const podeGerenciar = papel ? papelTemPermissao(papel, PERMISSOES.CADASTROS_GERENCIAR) : false;
   const [categorias, setCategorias] = useState<CategoriaServico[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
 
   async function recarregar() {
-    if (!empresaId) return;
+    if (!empresaId || !podeVisualizar) return;
     const [listaCategorias, listaServicos] = await Promise.all([
       repositories.categoriasServico.listar(empresaId),
       repositories.servicos.listar(empresaId),
@@ -27,9 +30,17 @@ export default function ServicosPage() {
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [empresaId, podeVisualizar]);
 
   if (!empresaId) return null;
+
+  if (!podeVisualizar) {
+    return (
+      <SurfaceCard className="p-5">
+        <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a servicos.</p>
+      </SurfaceCard>
+    );
+  }
 
   const nomeCategoria = (id: string | null) => categorias.find((categoria) => categoria.id === id)?.nome ?? "—";
 
@@ -40,6 +51,7 @@ export default function ServicosPage() {
       <CrudSection<CategoriaServico>
         titulo="Categorias de servico"
         nomeEntidade="Categoria"
+        somenteLeitura={!podeGerenciar}
         campos={[{ name: "nome", label: "Nome", tipo: "texto", obrigatorio: true }]}
         itens={categorias}
         colunas={[{ chave: "nome", titulo: "Nome", render: (item) => item.nome }]}
@@ -61,6 +73,7 @@ export default function ServicosPage() {
       <CrudSection<Servico>
         titulo="Servicos"
         nomeEntidade="Servico"
+        somenteLeitura={!podeGerenciar}
         campos={[
           { name: "nome", label: "Nome", tipo: "texto", obrigatorio: true },
           {

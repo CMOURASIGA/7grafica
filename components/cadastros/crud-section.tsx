@@ -33,6 +33,14 @@ type CrudSectionProps<T extends { id: string; ativo?: boolean }> = {
   aoRemover: (id: string) => Promise<void>;
   /** Botao/link extra por linha (ex.: "Abrir" para uma pagina de detalhe), renderizado antes de Editar/Remover. */
   acoesExtras?: (item: T) => React.ReactNode;
+  /**
+   * Quando true, esconde "+ Novo", Editar e Remover — usado quando o papel
+   * atual so tem permissao de leitura. Isto e reforco de UX: a permissao
+   * real e sempre validada de novo no repositorio (ver
+   * lib/repositories/authorization.ts), entao mesmo se esta prop for
+   * esquecida a escrita e bloqueada com um toast de erro.
+   */
+  somenteLeitura?: boolean;
 };
 
 const CAMPOS_VAZIOS = (campos: CampoFormulario[]): Record<string, string | boolean> =>
@@ -56,6 +64,7 @@ export function CrudSection<T extends { id: string; ativo?: boolean }>({
   aoAtualizar,
   aoRemover,
   acoesExtras,
+  somenteLeitura = false,
 }: CrudSectionProps<T>) {
   const { showToast } = useToast();
   const confirm = useConfirm();
@@ -125,12 +134,14 @@ export function CrudSection<T extends { id: string; ativo?: boolean }>({
           <SectionLabel>{titulo}</SectionLabel>
           {descricao ? <p className="mt-1 text-xs text-(--text-secondary)">{descricao}</p> : null}
         </div>
-        <button type="button" className="workspace-button-primary" onClick={abrirNovo}>
-          + Novo {nomeEntidade.toLowerCase()}
-        </button>
+        {somenteLeitura ? null : (
+          <button type="button" className="workspace-button-primary" onClick={abrirNovo}>
+            + Novo {nomeEntidade.toLowerCase()}
+          </button>
+        )}
       </div>
 
-      {formAberto ? (
+      {formAberto && !somenteLeitura ? (
         <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-(--border) bg-(--bg-muted) p-4 sm:grid-cols-2">
           {campos.map((campo) => (
             <div key={campo.name} className={campo.tipo === "textarea" ? "sm:col-span-2" : undefined}>
@@ -206,7 +217,7 @@ export function CrudSection<T extends { id: string; ativo?: boolean }>({
                     {coluna.titulo}
                   </th>
                 ))}
-                <th className="border-b border-(--border) py-2 pr-4" />
+                {somenteLeitura && !acoesExtras ? null : <th className="border-b border-(--border) py-2 pr-4" />}
               </tr>
             </thead>
             <tbody>
@@ -217,17 +228,23 @@ export function CrudSection<T extends { id: string; ativo?: boolean }>({
                       {coluna.render(item)}
                     </td>
                   ))}
-                  <td className="border-b border-(--border) py-3 pr-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      {acoesExtras?.(item)}
-                      <button type="button" className="workspace-button-secondary" onClick={() => abrirEdicao(item)}>
-                        Editar
-                      </button>
-                      <button type="button" className="workspace-button-danger" onClick={() => void handleRemover(item)}>
-                        Remover
-                      </button>
-                    </div>
-                  </td>
+                  {somenteLeitura && !acoesExtras ? null : (
+                    <td className="border-b border-(--border) py-3 pr-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        {acoesExtras?.(item)}
+                        {somenteLeitura ? null : (
+                          <>
+                            <button type="button" className="workspace-button-secondary" onClick={() => abrirEdicao(item)}>
+                              Editar
+                            </button>
+                            <button type="button" className="workspace-button-danger" onClick={() => void handleRemover(item)}>
+                              Remover
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
