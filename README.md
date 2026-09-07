@@ -29,3 +29,27 @@ Plataforma de gestao operacional para graficas.
 ## Diretriz visual
 
 O 7Grafica deve seguir os componentes, shell e padrao visual atual do 7Commander, inclusive a regra de identidade no canto superior esquerdo adotada nos produtos do HUB Consult Services.
+
+## Rodando localmente (SPEC 01 - Foundation)
+
+```bash
+npm install
+cp .env.example .env.local   # preencha com um projeto Supabase real
+npm run dev
+```
+
+Sem as variaveis do Supabase preenchidas, o app sobe em "modo local": shell,
+navegacao e responsividade funcionam, mas login e dados reais ficam
+indisponiveis (aviso visivel na tela). Isso existe para permitir preview do
+shell sem segredos — nao e o estado final de nenhuma tela.
+
+Migrations em `supabase/migrations/` criam empresas, perfis de usuario,
+vinculo usuario-empresa com papel (RBAC), matriz de permissoes, feature
+flags e auditoria, todas com RLS habilitado. Aplique com a Supabase CLI
+(`supabase db push`) ou MCP contra um projeto Supabase dedicado ao 7Grafica.
+
+Scripts:
+
+- `npm run dev` / `npm run build` / `npm run start`
+- `npm run lint` / `npm run typecheck`
+- `npm run test` (Vitest)

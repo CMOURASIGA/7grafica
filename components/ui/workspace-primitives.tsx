@@ -56,7 +56,7 @@ export function StatusPill({
   tone = "neutral",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "accent" | "success";
+  tone?: "neutral" | "accent" | "success" | "warning" | "danger";
 }) {
   return (
     <span
@@ -64,6 +64,8 @@ export function StatusPill({
         "workspace-pill",
         tone === "accent" && "workspace-pill-accent",
         tone === "success" && "workspace-pill-success",
+        tone === "warning" && "workspace-pill-warning",
+        tone === "danger" && "workspace-pill-danger",
       )}
     >
       {children}
