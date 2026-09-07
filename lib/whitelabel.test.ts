@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { CONSULT_LOGO_URL } from "./brand";
 import { resolverIdentidadeCanto } from "./whitelabel";
-import type { Empresa } from "./supabase/types";
+import type { Empresa } from "./domain/entities";
 
 function empresaBase(overrides: Partial<Empresa> = {}): Empresa {
   return {
     id: "empresa-1",
     nome: "Grafica Exemplo",
     slug: "grafica-exemplo",
-    logo_url: null,
-    cor_primaria: null,
-    cor_destaque: null,
+    logoUrl: null,
+    corPrimaria: null,
+    corDestaque: null,
     ativo: true,
-    criado_em: new Date().toISOString(),
+    criadoEm: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -33,7 +33,7 @@ describe("resolverIdentidadeCanto", () => {
 
   it("prioriza o logo do cliente quando ha whitelabel configurado", () => {
     const identidade = resolverIdentidadeCanto(
-      empresaBase({ logo_url: "https://cliente.example/logo.png", nome: "Grafica do Cliente" }),
+      empresaBase({ logoUrl: "https://cliente.example/logo.png", nome: "Grafica do Cliente" }),
     );
     expect(identidade.whitelabel).toBe(true);
     expect(identidade.logoUrl).toBe("https://cliente.example/logo.png");

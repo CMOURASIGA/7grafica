@@ -1,22 +1,35 @@
-import { PageIntro, SectionLabel, SurfaceCard } from "@/components/ui/workspace-primitives";
-import { getSessaoAtual } from "@/lib/auth/session";
-import { hasSupabaseConfig } from "@/lib/env";
-import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { EmpresaForm } from "./empresa-form";
-import { UsuariosTable, type LinhaUsuario } from "./usuarios-table";
+"use client";
 
-export default async function ConfiguracoesPage() {
-  if (!hasSupabaseConfig()) {
-    return (
-      <SurfaceCard className="p-5">
-        <p className="text-sm text-(--text-secondary)">Supabase nao configurado neste ambiente.</p>
-      </SurfaceCard>
-    );
+import { useEffect, useState } from "react";
+import { PageIntro, SectionLabel, SurfaceCard } from "@/components/ui/workspace-primitives";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
+import { useSessao } from "@/components/providers/session-provider";
+import { useRepositories } from "@/lib/repositories";
+import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
+import { restaurarDadosDemo } from "@/lib/mock/reset";
+import type { VinculoComPerfil } from "@/lib/repositories/types";
+import { EmpresaForm } from "./empresa-form";
+import { UsuariosTable } from "./usuarios-table";
+
+export default function ConfiguracoesPage() {
+  const repositories = useRepositories();
+  const { sessao } = useSessao();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
+  const [vinculos, setVinculos] = useState<VinculoComPerfil[]>([]);
+
+  const empresa = sessao?.empresaAtiva;
+
+  async function carregarUsuarios() {
+    if (!empresa) return;
+    setVinculos(await repositories.usuarios.listarPorEmpresa(empresa.id));
   }
 
-  const sessao = await getSessaoAtual();
-  const empresa = sessao?.empresaAtiva;
+  useEffect(() => {
+    void carregarUsuarios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [empresa?.id]);
 
   if (!sessao || !empresa) {
     return (
@@ -30,26 +43,18 @@ export default async function ConfiguracoesPage() {
     papelTemPermissao(empresa.papel, PERMISSOES.GERENCIAR_EMPRESA) || papelTemPermissao(empresa.papel, PERMISSOES.GERENCIAR_WHITELABEL);
   const podeGerenciarUsuarios = papelTemPermissao(empresa.papel, PERMISSOES.GERENCIAR_USUARIOS);
 
-  let linhasUsuarios: LinhaUsuario[] = [];
-  if (podeGerenciarUsuarios) {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase!
-      .from("empresa_usuarios")
-      .select("id, papel, ativo, usuario_id, perfil:usuarios_perfil(nome, email)")
-      .eq("empresa_id", empresa.id)
-      .order("criado_em", { ascending: true });
-
-    linhasUsuarios = (data ?? []).map((linha) => {
-      const perfil = linha.perfil as unknown as { nome: string; email: string | null } | null;
-      return {
-        vinculoId: linha.id as string,
-        nome: perfil?.nome ?? "",
-        email: perfil?.email ?? null,
-        papel: linha.papel,
-        ativo: linha.ativo,
-        souEu: linha.usuario_id === sessao.usuario.id,
-      };
+  async function handleRestaurarDemo() {
+    const ok = await confirm({
+      title: "Restaurar dados de demonstracao?",
+      description:
+        "Todos os cadastros, usuarios e configuracoes locais serao substituidos pelo conjunto de demonstracao original. Esta acao nao pode ser desfeita.",
+      confirmLabel: "Restaurar",
+      tone: "danger",
     });
+    if (!ok) return;
+    restaurarDadosDemo();
+    showToast("Dados de demonstracao restaurados. Faca login novamente.", "success");
+    window.location.href = "/login";
   }
 
   return (
@@ -73,7 +78,7 @@ export default async function ConfiguracoesPage() {
         <SurfaceCard className="p-5">
           <SectionLabel>Usuarios da empresa</SectionLabel>
           <div className="mt-4">
-            <UsuariosTable linhas={linhasUsuarios} />
+            <UsuariosTable vinculos={vinculos} onAtualizado={carregarUsuarios} />
           </div>
         </SurfaceCard>
       ) : null}
@@ -81,6 +86,20 @@ export default async function ConfiguracoesPage() {
       {!podeGerenciarEmpresa && !podeGerenciarUsuarios ? (
         <SurfaceCard className="p-5">
           <p className="text-sm text-(--text-secondary)">Seu papel atual nao tem acesso a nenhuma configuracao.</p>
+        </SurfaceCard>
+      ) : null}
+
+      {papelTemPermissao(empresa.papel, PERMISSOES.GERENCIAR_FEATURE_FLAGS) ? (
+        <SurfaceCard className="p-5">
+          <SectionLabel>Dados de demonstracao</SectionLabel>
+          <p className="mt-3 text-sm leading-6 text-(--text-secondary)">
+            Enquanto o 7Grafica roda sem Supabase, todos os dados vivem no LocalStorage deste navegador. Use esta
+            opcao para descartar qualquer alteracao e voltar ao conjunto de demonstracao original (mesma empresa,
+            usuarios, clientes e cadastros).
+          </p>
+          <button type="button" onClick={() => void handleRestaurarDemo()} className="mt-4 workspace-button-danger">
+            Restaurar dados de demonstracao
+          </button>
         </SurfaceCard>
       ) : null}
     </div>

@@ -1,5 +1,5 @@
 import { CONSULT_LOGO_URL } from "@/lib/brand";
-import type { Empresa } from "@/lib/supabase/types";
+import type { Empresa } from "@/lib/domain/entities";
 
 export type IdentidadeCanto = {
   /** Logo mostrado no topo da sidebar (canto superior esquerdo). */
@@ -19,13 +19,13 @@ export type IdentidadeCanto = {
  * nunca um icone "C" isolado, nunca marca do 7Commander.
  */
 export function resolverIdentidadeCanto(empresa: Empresa | null): IdentidadeCanto {
-  if (empresa?.logo_url) {
+  if (empresa?.logoUrl) {
     return {
-      logoUrl: empresa.logo_url,
+      logoUrl: empresa.logoUrl,
       nomeCliente: empresa.nome,
       whitelabel: true,
-      corPrimaria: empresa.cor_primaria,
-      corDestaque: empresa.cor_destaque,
+      corPrimaria: empresa.corPrimaria,
+      corDestaque: empresa.corDestaque,
     };
   }
 
@@ -33,7 +33,7 @@ export function resolverIdentidadeCanto(empresa: Empresa | null): IdentidadeCant
     logoUrl: CONSULT_LOGO_URL,
     nomeCliente: null,
     whitelabel: false,
-    corPrimaria: empresa?.cor_primaria ?? null,
-    corDestaque: empresa?.cor_destaque ?? null,
+    corPrimaria: empresa?.corPrimaria ?? null,
+    corDestaque: empresa?.corDestaque ?? null,
   };
 }

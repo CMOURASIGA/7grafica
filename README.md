@@ -30,23 +30,77 @@ Plataforma de gestao operacional para graficas.
 
 O 7Grafica deve seguir os componentes, shell e padrao visual atual do 7Commander, inclusive a regra de identidade no canto superior esquerdo adotada nos produtos do HUB Consult Services.
 
-## Rodando localmente (SPEC 01 - Foundation)
+## Rodando localmente
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha com um projeto Supabase real
 npm run dev
 ```
 
-Sem as variaveis do Supabase preenchidas, o app sobe em "modo local": shell,
-navegacao e responsividade funcionam, mas login e dados reais ficam
-indisponiveis (aviso visivel na tela). Isso existe para permitir preview do
-shell sem segredos — nao e o estado final de nenhuma tela.
+Nenhuma variavel de ambiente e necessaria. O MVP roda com dados mockados
+persistidos em **LocalStorage** — fase de validacao operacional do produto,
+antes de provisionar o Supabase definitivo. No primeiro acesso o app semeia
+automaticamente uma empresa de demonstracao ("Grafica Nova Era"), 4 usuarios
+(um por papel) e os cadastros da SPEC 02. A tela de login lista as
+credenciais de demonstracao para preencher com um clique.
 
-Migrations em `supabase/migrations/` criam empresas, perfis de usuario,
-vinculo usuario-empresa com papel (RBAC), matriz de permissoes, feature
-flags e auditoria, todas com RLS habilitado. Aplique com a Supabase CLI
-(`supabase db push`) ou MCP contra um projeto Supabase dedicado ao 7Grafica.
+Em **Configuracoes** (perfil admin) existe "Restaurar dados de demonstracao"
+para descartar qualquer alteracao local e voltar ao conjunto original.
+
+### Arquitetura de persistencia (importante para as proximas SPECs)
+
+Nenhum componente ou pagina acessa `localStorage` ou Supabase diretamente.
+Toda leitura/escrita passa por uma camada de repositorios:
+
+```
+UI / regra de negocio
+        │  usa apenas tipos de lib/repositories/types.ts
+        ▼
+lib/repositories/index.ts  (getRepositories() — o unico ponto de escolha do adapter)
+        │
+        ▼
+lib/repositories/local/*   (adapter ativo hoje: LocalStorage)
+        │
+        ▼
+lib/storage/local-storage-client.ts  (unico arquivo que toca window.localStorage)
+```
+
+Quando o Supabase definitivo for provisionado, um novo
+`lib/repositories/supabase/*` implementa as mesmas interfaces de
+`lib/repositories/types.ts` e `getRepositories()` passa a devolve-lo — nenhuma
+tela, formulario ou regra de negocio precisa mudar. As migrations e a
+arquitetura de RLS/RBAC/auditoria da Foundation (`supabase/migrations/`,
+`lib/supabase/*`, `lib/auth/session.ts`) continuam no repositorio, prontas
+para esse momento, mas não são usadas pelo MVP local — a autenticação atual
+é simulada (usuários, empresa, papéis e permissões seedados) só para validar
+os fluxos.
+
+### Documentacao
+
+- docs/00-PRODUCT-VISION.md
+- docs/01-DESIGN-SYSTEM.md
+- docs/02-DOMAIN-MODEL.md
+- specs/00-ROADMAP.md
+- specs/01-FOUNDATION.md
+- specs/02-CADASTROS.md
+- specs/03-EMAIL-ORCAMENTO.md
+- specs/04-PDV-CAIXA.md
+- specs/05-PEDIDOS-KANBAN.md
+- specs/06-PRODUCAO-EQUIPAMENTOS.md
+- specs/07-ARQUIVOS-ARTE.md
+- specs/08-ESTOQUE-COMPRAS.md
+- specs/09-FINANCEIRO.md
+- specs/10-PORTAL-CLIENTE.md
+- specs/11-ENTREGA-HISTORICO.md
+- specs/12-RELATORIOS-ADMIN.md
+
+### Quando o Supabase definitivo for provisionado
+
+```bash
+cp .env.example .env.local   # preencha com o projeto Supabase real
+```
+
+Aplique `supabase/migrations/` com a Supabase CLI (`supabase db push`) ou MCP.
 
 Scripts:
 

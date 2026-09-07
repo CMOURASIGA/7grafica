@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
-import type { Papel } from "@/lib/supabase/types";
+import type { Papel } from "@/lib/domain/entities";
 import type { IdentidadeCanto } from "@/lib/whitelabel";
 
 export type AppShellProps = {

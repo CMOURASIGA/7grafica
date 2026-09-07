@@ -1,4 +1,4 @@
-import type { Papel } from "@/lib/supabase/types";
+import type { Papel } from "@/lib/domain/entities";
 
 // Matriz de permissoes da Foundation. Fases futuras (specs 02+) adicionam
 // permissoes de dominio (pedidos, estoque, financeiro etc.) sem alterar

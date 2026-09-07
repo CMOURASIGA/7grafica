@@ -6,7 +6,7 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { PRODUCT_NAME, PRODUCT_SUBTITLE } from "@/lib/brand";
 import { papelTemPermissao } from "@/lib/rbac";
 import type { IdentidadeCanto } from "@/lib/whitelabel";
-import type { Papel } from "@/lib/supabase/types";
+import type { Papel } from "@/lib/domain/entities";
 
 type IconName = (typeof NAV_ITEMS)[number]["icon"];
 
@@ -26,6 +26,14 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
       <path d="m3 6 1 1 2-2" />
       <path d="m3 12 1 1 2-2" />
       <path d="m3 18 1 1 2-2" />
+    </>
+  ),
+  cadastros: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.2" />
+      <rect x="13" y="4" width="7" height="7" rx="1.2" />
+      <rect x="4" y="13" width="7" height="7" rx="1.2" />
+      <rect x="13" y="13" width="7" height="7" rx="1.2" />
     </>
   ),
 };

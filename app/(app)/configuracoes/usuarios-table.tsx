@@ -1,39 +1,48 @@
 "use client";
 
 import { useTransition } from "react";
-import { alterarPapelUsuarioAction, alternarAtivoUsuarioAction } from "./actions";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { useSessao } from "@/components/providers/session-provider";
+import { useRepositories } from "@/lib/repositories";
 import { PAPEL_LABEL } from "@/lib/rbac";
-import type { Papel } from "@/lib/supabase/types";
-
-export type LinhaUsuario = {
-  vinculoId: string;
-  nome: string;
-  email: string | null;
-  papel: Papel;
-  ativo: boolean;
-  souEu: boolean;
-};
+import type { Papel } from "@/lib/domain/entities";
+import type { VinculoComPerfil } from "@/lib/repositories/types";
 
 const PAPEIS: Papel[] = ["admin", "gerente", "atendente", "operador"];
 
-export function UsuariosTable({ linhas }: { linhas: LinhaUsuario[] }) {
+export function UsuariosTable({ vinculos, onAtualizado }: { vinculos: VinculoComPerfil[]; onAtualizado: () => void }) {
+  const repositories = useRepositories();
+  const { sessao } = useSessao();
   const { showToast } = useToast();
   const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
   function handlePapelChange(vinculoId: string, papel: Papel) {
     startTransition(async () => {
-      const resultado = await alterarPapelUsuarioAction(vinculoId, papel);
-      showToast(resultado.ok ? "Papel atualizado." : resultado.erro, resultado.ok ? "success" : "error");
+      try {
+        await repositories.usuarios.alterarPapel(vinculoId, papel);
+        await repositories.auditoria.registrar({
+          empresaId: sessao!.empresaAtiva!.id,
+          usuarioId: sessao!.usuario.id,
+          acao: "empresa_usuarios.alterar_papel",
+          entidade: "empresa_usuarios",
+          entidadeId: vinculoId,
+          dadosAntes: null,
+          dadosDepois: { papel },
+        });
+        showToast("Papel atualizado.", "success");
+        onAtualizado();
+      } catch (erro) {
+        showToast(erro instanceof Error ? erro.message : "Falha ao salvar.", "error");
+      }
     });
   }
 
-  async function handleToggleAtivo(linha: LinhaUsuario) {
-    if (linha.ativo) {
+  async function handleToggleAtivo(vinculo: VinculoComPerfil) {
+    if (vinculo.ativo) {
       const ok = await confirm({
-        title: `Desativar acesso de ${linha.nome || linha.email || "usuario"}?`,
+        title: `Desativar acesso de ${vinculo.perfil?.nome || vinculo.perfil?.email || "usuario"}?`,
         description: "O usuario perde o acesso a esta empresa imediatamente. Voce pode reativar depois.",
         confirmLabel: "Desativar",
         tone: "danger",
@@ -42,12 +51,26 @@ export function UsuariosTable({ linhas }: { linhas: LinhaUsuario[] }) {
     }
 
     startTransition(async () => {
-      const resultado = await alternarAtivoUsuarioAction(linha.vinculoId, !linha.ativo);
-      showToast(resultado.ok ? "Acesso atualizado." : resultado.erro, resultado.ok ? "success" : "error");
+      try {
+        await repositories.usuarios.definirAtivo(vinculo.id, !vinculo.ativo);
+        await repositories.auditoria.registrar({
+          empresaId: sessao!.empresaAtiva!.id,
+          usuarioId: sessao!.usuario.id,
+          acao: vinculo.ativo ? "empresa_usuarios.desativar" : "empresa_usuarios.reativar",
+          entidade: "empresa_usuarios",
+          entidadeId: vinculo.id,
+          dadosAntes: null,
+          dadosDepois: { ativo: !vinculo.ativo },
+        });
+        showToast("Acesso atualizado.", "success");
+        onAtualizado();
+      } catch (erro) {
+        showToast(erro instanceof Error ? erro.message : "Falha ao salvar.", "error");
+      }
     });
   }
 
-  if (linhas.length === 0) {
+  if (vinculos.length === 0) {
     return <p className="workspace-empty-state">Nenhum usuario vinculado a esta empresa ainda.</p>;
   }
 
@@ -63,43 +86,46 @@ export function UsuariosTable({ linhas }: { linhas: LinhaUsuario[] }) {
           </tr>
         </thead>
         <tbody>
-          {linhas.map((linha) => (
-            <tr key={linha.vinculoId}>
-              <td className="border-b border-(--border) py-3 pr-4">
-                <p className="font-medium text-(--text-primary)">{linha.nome || "Sem nome"}</p>
-                <p className="text-xs text-(--text-secondary)">{linha.email ?? "—"}</p>
-              </td>
-              <td className="border-b border-(--border) py-3 pr-4">
-                <select
-                  className="workspace-select"
-                  defaultValue={linha.papel}
-                  disabled={pending || linha.souEu}
-                  onChange={(event) => handlePapelChange(linha.vinculoId, event.target.value as Papel)}
-                >
-                  {PAPEIS.map((papel) => (
-                    <option key={papel} value={papel}>
-                      {PAPEL_LABEL[papel]}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="border-b border-(--border) py-3 pr-4">
-                <span className={`workspace-pill ${linha.ativo ? "workspace-pill-success" : "workspace-pill-danger"}`}>
-                  {linha.ativo ? "Ativo" : "Inativo"}
-                </span>
-              </td>
-              <td className="border-b border-(--border) py-3 pr-4 text-right">
-                <button
-                  type="button"
-                  disabled={pending || linha.souEu}
-                  onClick={() => void handleToggleAtivo(linha)}
-                  className={linha.ativo ? "workspace-button-danger" : "workspace-button-secondary"}
-                >
-                  {linha.ativo ? "Desativar" : "Reativar"}
-                </button>
-              </td>
-            </tr>
-          ))}
+          {vinculos.map((vinculo) => {
+            const souEu = vinculo.usuarioId === sessao?.usuario.id;
+            return (
+              <tr key={vinculo.id}>
+                <td className="border-b border-(--border) py-3 pr-4">
+                  <p className="font-medium text-(--text-primary)">{vinculo.perfil?.nome || "Sem nome"}</p>
+                  <p className="text-xs text-(--text-secondary)">{vinculo.perfil?.email ?? "—"}</p>
+                </td>
+                <td className="border-b border-(--border) py-3 pr-4">
+                  <select
+                    className="workspace-select"
+                    defaultValue={vinculo.papel}
+                    disabled={pending || souEu}
+                    onChange={(event) => handlePapelChange(vinculo.id, event.target.value as Papel)}
+                  >
+                    {PAPEIS.map((papel) => (
+                      <option key={papel} value={papel}>
+                        {PAPEL_LABEL[papel]}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="border-b border-(--border) py-3 pr-4">
+                  <span className={`workspace-pill ${vinculo.ativo ? "workspace-pill-success" : "workspace-pill-danger"}`}>
+                    {vinculo.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                </td>
+                <td className="border-b border-(--border) py-3 pr-4 text-right">
+                  <button
+                    type="button"
+                    disabled={pending || souEu}
+                    onClick={() => void handleToggleAtivo(vinculo)}
+                    className={vinculo.ativo ? "workspace-button-danger" : "workspace-button-secondary"}
+                  >
+                    {vinculo.ativo ? "Desativar" : "Reativar"}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

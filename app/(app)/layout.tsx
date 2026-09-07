@@ -1,31 +1,43 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { getSessaoAtual } from "@/lib/auth/session";
-import { hasSupabaseConfig } from "@/lib/env";
+import { useSessao } from "@/components/providers/session-provider";
 import { resolverIdentidadeCanto } from "@/lib/whitelabel";
 
-export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  const supabaseConfigurado = hasSupabaseConfig();
-  const sessao = supabaseConfigurado ? await getSessaoAtual() : null;
+export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const { carregando, sessao } = useSessao();
+  const router = useRouter();
 
-  if (supabaseConfigurado && !sessao) {
-    redirect("/login");
+  useEffect(() => {
+    if (!carregando && !sessao) {
+      router.replace("/login");
+    }
+  }, [carregando, sessao, router]);
+
+  if (carregando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-page)">
+        <p className="text-sm text-(--text-secondary)">Carregando workspace...</p>
+      </div>
+    );
   }
 
-  const identidade = resolverIdentidadeCanto(sessao?.empresaAtiva ?? null);
+  if (!sessao) {
+    // Redirecionamento em andamento (useEffect acima); evita flash de shell vazio.
+    return null;
+  }
+
+  const identidade = resolverIdentidadeCanto(sessao.empresaAtiva);
 
   return (
     <AppShell
       identidade={identidade}
-      email={sessao?.usuario.email ?? null}
-      papel={sessao?.empresaAtiva?.papel ?? null}
-      empresaNome={sessao?.empresaAtiva?.nome ?? null}
+      email={sessao.usuario.email}
+      papel={sessao.empresaAtiva?.papel ?? null}
+      empresaNome={sessao.empresaAtiva?.nome ?? null}
     >
-      {!supabaseConfigurado ? (
-        <div className="mb-4 rounded-xl border border-(--warning) bg-(--warning-soft) px-4 py-3 text-sm text-(--warning)">
-          Supabase nao configurado neste ambiente — exibindo shell em modo local, sem autenticacao nem dados reais.
-        </div>
-      ) : null}
       {children}
     </AppShell>
   );

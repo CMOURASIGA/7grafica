@@ -3,12 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useSessao } from "@/components/providers/session-provider";
 import { PAPEL_LABEL } from "@/lib/rbac";
-import type { Papel } from "@/lib/supabase/types";
+import type { Papel } from "@/lib/domain/entities";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Inicio",
+  "/cadastros": "Cadastros",
+  "/cadastros/clientes": "Clientes",
+  "/cadastros/fornecedores": "Fornecedores",
+  "/cadastros/servicos": "Servicos",
+  "/cadastros/materiais": "Materiais",
+  "/cadastros/equipamentos": "Equipamentos",
+  "/cadastros/formas-pagamento": "Formas de pagamento",
+  "/cadastros/workflows": "Workflows",
   "/configuracoes": "Configuracoes",
   "/auditoria": "Auditoria",
   "/login": "Acesso",
@@ -25,7 +33,13 @@ type HeaderProps = {
 export function Header({ onToggleMobileNav, mobileNavOpen, email, papel, empresaNome }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const pageTitle = PAGE_TITLES[pathname] ?? "Workspace";
+  const { sair } = useSessao();
+  const pageTitle =
+    PAGE_TITLES[pathname] ??
+    Object.entries(PAGE_TITLES)
+      .filter(([rota]) => rota !== "/" && pathname.startsWith(rota))
+      .sort((a, b) => b[0].length - a[0].length)[0]?.[1] ??
+    "Workspace";
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const avatarLabel = (email ?? "7g")
@@ -45,10 +59,8 @@ export function Header({ onToggleMobileNav, mobileNavOpen, email, papel, empresa
   }, []);
 
   async function handleSignOut() {
-    const client = getSupabaseBrowserClient();
-    await client?.auth.signOut();
+    await sair();
     router.replace("/login");
-    router.refresh();
   }
 
   return (
