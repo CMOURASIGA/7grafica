@@ -300,9 +300,17 @@ export const pedidosSeed: Pedido[] = [
     id: "pedido-1",
     empresaId: EMPRESA_DEMO_ID,
     clienteId: "cliente-1",
+    origem: "email",
     orcamentoId: "orc-1",
     numero: "PED-0001",
-    status: "confirmado",
+    itens: orcamentosSeed[0].itens.map((item) => ({ ...item })),
+    valorTotal: orcamentosSeed[0].valorTotal,
+    // Deliberadamente sem recebimento no seed: demonstra pedido "aguardando
+    // producao" com saldo pendente, para ser pago depois pelo balcao
+    // (SPEC 04) — o mesmo Pedido, independente da origem ter sido e-mail.
+    statusEntrega: "aguardando_producao",
+    tokenAcompanhamento: "demo-token-pedido-0001",
     criadoEm: "2026-02-19T08:31:00.000Z",
+    concluidoEm: null,
   },
 ];

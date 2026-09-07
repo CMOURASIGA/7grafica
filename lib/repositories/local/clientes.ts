@@ -38,5 +38,38 @@ export function criarClienteRepositoryLocal(): ClienteRepository {
         ) ?? null
       );
     },
+    async buscarRapido(empresaId, texto) {
+      const alvo = texto.trim().toLowerCase();
+      const alvoSoDigitos = alvo.replace(/\D/g, "");
+      if (!alvo) return [];
+
+      const clientes = lerColecao<Cliente>(CHAVE).filter((cliente) => cliente.empresaId === empresaId);
+      const contatos = lerColecao<Contato>(CHAVE_CONTATOS).filter((contato) => contato.empresaId === empresaId);
+      const emails = lerColecao<EmailContato>(CHAVE_EMAILS).filter((email) => email.empresaId === empresaId);
+
+      const clienteIdsPorContato = new Set(
+        contatos
+          .filter(
+            (contato) =>
+              contato.nome.toLowerCase().includes(alvo) ||
+              (alvoSoDigitos && contato.telefone && contato.telefone.replace(/\D/g, "").includes(alvoSoDigitos)),
+          )
+          .map((contato) => contato.clienteId),
+      );
+      const clienteIdsPorEmail = new Set(
+        emails
+          .filter((email) => email.email.toLowerCase().includes(alvo))
+          .map((email) => contatos.find((contato) => contato.id === email.contatoId)?.clienteId)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      return clientes.filter(
+        (cliente) =>
+          cliente.nome.toLowerCase().includes(alvo) ||
+          (alvoSoDigitos && (cliente.documento ?? "").replace(/\D/g, "").includes(alvoSoDigitos)) ||
+          clienteIdsPorContato.has(cliente.id) ||
+          clienteIdsPorEmail.has(cliente.id),
+      );
+    },
   };
 }

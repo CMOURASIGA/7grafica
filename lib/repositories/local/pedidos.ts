@@ -5,6 +5,13 @@ import type { PedidoRepository } from "@/lib/repositories/types";
 const CHAVE = "pedidos";
 const CHAVE_ORCAMENTOS = "orcamentos";
 
+function gerarToken(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function proximoNumero(empresaId: string): string {
   const existentes = lerColecao<Pedido>(CHAVE).filter((pedido) => pedido.empresaId === empresaId);
   const maiorSequencia = existentes.reduce((maior, pedido) => {
@@ -22,6 +29,9 @@ export function criarPedidoRepositoryLocal(): PedidoRepository {
     async obter(id) {
       return lerColecao<Pedido>(CHAVE).find((pedido) => pedido.id === id) ?? null;
     },
+    async buscarPorToken(token) {
+      return lerColecao<Pedido>(CHAVE).find((pedido) => pedido.tokenAcompanhamento === token) ?? null;
+    },
     async criarAPartirDeOrcamentoAprovado(orcamentoId) {
       const orcamento = lerColecao<Orcamento>(CHAVE_ORCAMENTOS).find((item) => item.id === orcamentoId);
       if (!orcamento) throw new Error(`Orcamento ${orcamentoId} nao encontrado.`);
@@ -36,15 +46,49 @@ export function criarPedidoRepositoryLocal(): PedidoRepository {
         id: `ped-${Math.random().toString(36).slice(2, 10)}`,
         empresaId: orcamento.empresaId,
         clienteId: orcamento.clienteId,
+        origem: "email",
         orcamentoId: orcamento.id,
         numero: proximoNumero(orcamento.empresaId),
-        status: "confirmado",
+        itens: orcamento.itens.map((item) => ({ ...item })),
+        valorTotal: orcamento.valorTotal,
+        statusEntrega: "aguardando_producao",
+        tokenAcompanhamento: gerarToken(),
         criadoEm: new Date().toISOString(),
+        concluidoEm: null,
       };
       const pedidos = lerColecao<Pedido>(CHAVE);
       pedidos.push(novo);
       gravarColecao(CHAVE, pedidos);
       return novo;
+    },
+    async criarAtendimentoBalcao(dados) {
+      const novo: Pedido = {
+        id: `ped-${Math.random().toString(36).slice(2, 10)}`,
+        empresaId: dados.empresaId,
+        clienteId: dados.clienteId,
+        origem: "balcao",
+        orcamentoId: null,
+        numero: proximoNumero(dados.empresaId),
+        itens: dados.itens,
+        valorTotal: dados.valorTotal,
+        statusEntrega: dados.statusEntrega,
+        tokenAcompanhamento: gerarToken(),
+        criadoEm: new Date().toISOString(),
+        concluidoEm: dados.statusEntrega === "concluido" ? new Date().toISOString() : null,
+      };
+      const pedidos = lerColecao<Pedido>(CHAVE);
+      pedidos.push(novo);
+      gravarColecao(CHAVE, pedidos);
+      return novo;
+    },
+    async marcarConcluido(pedidoId) {
+      const pedidos = lerColecao<Pedido>(CHAVE);
+      const indice = pedidos.findIndex((pedido) => pedido.id === pedidoId);
+      if (indice === -1) throw new Error(`Pedido ${pedidoId} nao encontrado.`);
+      const atualizado: Pedido = { ...pedidos[indice], statusEntrega: "concluido", concluidoEm: new Date().toISOString() };
+      pedidos[indice] = atualizado;
+      gravarColecao(CHAVE, pedidos);
+      return atualizado;
     },
   };
 }

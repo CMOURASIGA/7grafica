@@ -64,10 +64,11 @@ export function restaurarDadosDemo(): void {
   gravarColecao("pedidos", pedidosSeed);
 }
 
-// v2: adiciona o dataset da SPEC 03 (e-mails, solicitacoes, orcamentos,
-// pedidos) — incrementado para que sessoes que ja tinham feito bootstrap
-// da v1 (so Foundation + Cadastros) recebam os dados novos automaticamente.
-const CHAVE_BOOTSTRAP = "bootstrap_v2";
+// v3: SPEC 04 mudou o formato de Pedido (origem, itens, statusEntrega,
+// tokenAcompanhamento) e adicionou Caixa/Recebimento — incrementado para
+// que sessoes com bootstrap anterior recebam o novo formato automaticamente
+// em vez de quebrar ao ler um Pedido no formato antigo.
+const CHAVE_BOOTSTRAP = "bootstrap_v3";
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {

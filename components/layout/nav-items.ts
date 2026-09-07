@@ -4,18 +4,25 @@ export type NavItem = {
   section: string;
   href: string;
   label: string;
-  icon: "home" | "settings" | "audit" | "cadastros" | "inbox" | "orcamento" | "pedido";
+  icon: "home" | "settings" | "audit" | "cadastros" | "inbox" | "orcamento" | "pedido" | "pdv" | "caixa";
   /** Quando definido, o item so aparece se o usuario tiver essa permissao na empresa ativa. */
   permissaoRequerida?: Permissao;
 };
 
-// Navegacao atual. SPEC 02 adicionou "Cadastros"; SPEC 03 adiciona
-// "Atendimento" (caixa de entrada, orcamentos, pedidos). Nenhum outro
-// modulo de negocio (PDV, kanban, estoque, financeiro, portal) entra aqui
-// antes da respectiva SPEC.
+// Navegacao atual. SPEC 02 adicionou "Cadastros"; SPEC 03 adicionou
+// e-mail/orcamentos; SPEC 04 adiciona PDV e Caixa. Nenhum outro modulo de
+// negocio (kanban, estoque, financeiro, portal) entra aqui antes da
+// respectiva SPEC.
 export const NAV_ITEMS: NavItem[] = [
   { section: "Principal", href: "/", label: "Inicio", icon: "home" },
   { section: "Principal", href: "/cadastros", label: "Cadastros", icon: "cadastros" },
+  {
+    section: "Atendimento",
+    href: "/pdv",
+    label: "PDV",
+    icon: "pdv",
+    permissaoRequerida: PERMISSOES.PDV_OPERAR,
+  },
   {
     section: "Atendimento",
     href: "/solicitacoes",
@@ -36,6 +43,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Pedidos",
     icon: "pedido",
     permissaoRequerida: PERMISSOES.SOLICITACOES_GERENCIAR,
+  },
+  {
+    section: "Atendimento",
+    href: "/caixa",
+    label: "Caixa",
+    icon: "caixa",
+    permissaoRequerida: PERMISSOES.CAIXA_GERENCIAR,
   },
   {
     section: "Sistema",

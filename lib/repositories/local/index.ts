@@ -26,6 +26,9 @@ import { criarSolicitacaoRepositoryLocal } from "@/lib/repositories/local/solici
 import { criarOrcamentoRepositoryLocal } from "@/lib/repositories/local/orcamentos";
 import { criarEmailEnviadoRepositoryLocal } from "@/lib/repositories/local/emails-enviados";
 import { criarPedidoRepositoryLocal } from "@/lib/repositories/local/pedidos";
+import { criarCaixaRepositoryLocal } from "@/lib/repositories/local/caixa";
+import { criarMovimentoCaixaRepositoryLocal } from "@/lib/repositories/local/movimentos-caixa";
+import { criarRecebimentoRepositoryLocal } from "@/lib/repositories/local/recebimentos";
 
 /**
  * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
@@ -61,5 +64,9 @@ export function criarRepositoriesLocal(): Repositories {
     orcamentos: criarOrcamentoRepositoryLocal(),
     emailsEnviados: criarEmailEnviadoRepositoryLocal(),
     pedidos: criarPedidoRepositoryLocal(),
+
+    caixa: criarCaixaRepositoryLocal(),
+    movimentosCaixaManual: criarMovimentoCaixaRepositoryLocal(),
+    recebimentos: criarRecebimentoRepositoryLocal(),
   };
 }

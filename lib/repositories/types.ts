@@ -8,6 +8,7 @@
 // quando o adapter real fizer round-trip de rede.
 
 import type {
+  Caixa,
   CapacidadeEquipamento,
   CategoriaServico,
   Cliente,
@@ -26,11 +27,15 @@ import type {
   FormaPagamento,
   Material,
   MotivoRejeicaoOrcamento,
+  MovimentoCaixaManual,
   Orcamento,
+  OrcamentoItem,
   Papel,
   Pedido,
+  Recebimento,
   Servico,
   Solicitacao,
+  StatusEntregaPedido,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -85,6 +90,8 @@ export type ClienteRepository = CrudRepository<Cliente, Omit<Cliente, "id" | "cr
   /** Indexado por e-mail: varre contatos/e-mails do cliente para localizacao rapida (ex.: ingestao de e-mail, PDV). */
   buscarPorEmail(empresaId: string, email: string): Promise<Cliente | null>;
   buscarPorDocumento(empresaId: string, documento: string): Promise<Cliente | null>;
+  /** Busca rapida por nome, documento, telefone ou e-mail (contatos) — usada no PDV para achar o cliente em um unico campo. */
+  buscarRapido(empresaId: string, texto: string): Promise<Cliente[]>;
 };
 
 export type ContatoRepository = CrudRepository<Contato, Omit<Contato, "id">> & {
@@ -163,8 +170,52 @@ export type EmailEnviadoRepository = {
 export type PedidoRepository = {
   listar(empresaId: string): Promise<Pedido[]>;
   obter(id: string): Promise<Pedido | null>;
-  /** Unica forma de criar um Pedido: sempre a partir de um Orcamento aprovado (regra de produto). */
+  buscarPorToken(token: string): Promise<Pedido | null>;
+  /** Origem "email": sempre a partir de um Orcamento aprovado (regra de produto), idempotente. */
   criarAPartirDeOrcamentoAprovado(orcamentoId: string): Promise<Pedido>;
+  /** Origem "balcao": atendimento de PDV, com ou sem cliente identificado. */
+  criarAtendimentoBalcao(dados: {
+    empresaId: string;
+    clienteId: string | null;
+    itens: OrcamentoItem[];
+    valorTotal: number;
+    statusEntrega: StatusEntregaPedido;
+  }): Promise<Pedido>;
+  marcarConcluido(pedidoId: string): Promise<Pedido>;
+};
+
+// --- SPEC 04: Balcao, PDV e Caixa ------------------------------------------
+
+export type ResumoCaixa = {
+  caixa: Caixa;
+  totalPorFormaPagamento: { formaPagamentoId: string; nomeFormaPagamento: string; total: number }[];
+  totalRecebido: number;
+  totalEntradasManuais: number;
+  totalSaidasManuais: number;
+  /** Saldo fisico esperado em dinheiro: abertura + recebimentos em dinheiro + entradas - saidas manuais. */
+  saldoDinheiroEsperado: number;
+  quantidadePedidosAtendidos: number;
+  ticketMedio: number;
+};
+
+export type CaixaRepository = {
+  obterAberto(empresaId: string): Promise<Caixa | null>;
+  listar(empresaId: string): Promise<Caixa[]>;
+  obter(id: string): Promise<Caixa | null>;
+  abrir(dados: { empresaId: string; usuarioId: string; valorAberturaDinheiro: number; observacoes: string | null }): Promise<Caixa>;
+  fechar(caixaId: string, dados: { usuarioId: string; observacoes: string | null }): Promise<Caixa>;
+  obterResumo(caixaId: string): Promise<ResumoCaixa>;
+};
+
+export type MovimentoCaixaManualRepository = {
+  listarPorCaixa(caixaId: string): Promise<MovimentoCaixaManual[]>;
+  criar(dados: Omit<MovimentoCaixaManual, "id" | "registradoEm">): Promise<MovimentoCaixaManual>;
+};
+
+export type RecebimentoRepository = {
+  listarPorPedido(pedidoId: string): Promise<Recebimento[]>;
+  /** Calcula troco automaticamente quando a forma de pagamento e dinheiro e valorEntregueDinheiro e informado. */
+  criar(dados: Omit<Recebimento, "id" | "registradoEm" | "troco">): Promise<Recebimento>;
 };
 
 export type Repositories = {
@@ -193,4 +244,8 @@ export type Repositories = {
   orcamentos: OrcamentoRepository;
   emailsEnviados: EmailEnviadoRepository;
   pedidos: PedidoRepository;
+
+  caixa: CaixaRepository;
+  movimentosCaixaManual: MovimentoCaixaManualRepository;
+  recebimentos: RecebimentoRepository;
 };

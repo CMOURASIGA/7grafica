@@ -159,3 +159,51 @@ describe("RBAC de Solicitacoes/Orcamentos (SPEC 03) — repositorio", () => {
     await expect(repos.servicos.listar(EMPRESA_ID)).resolves.toEqual([]);
   });
 });
+
+describe("RBAC de Balcao/PDV/Caixa (SPEC 04) — repositorio", () => {
+  beforeEach(() => {
+    limparNamespace();
+  });
+
+  it("Atendente: opera o PDV (cria pedido de balcao), mas nao abre caixa nem lanca movimento manual", async () => {
+    const repos = protegerRepositories(criarRepositoriesLocal(), "atendente");
+
+    // Permitido: atendimento de balcao.
+    const pedido = await repos.pedidos.criarAtendimentoBalcao({
+      empresaId: EMPRESA_ID,
+      clienteId: null,
+      itens: [{ id: "item-1", descricao: "Servico", quantidade: 1, servicoId: null, materialId: null, acabamentos: null, precoUnitario: 10 }],
+      valorTotal: 10,
+      statusEntrega: "concluido",
+    });
+    expect(pedido.numero).toBeTruthy();
+
+    // Permitido: ler se o caixa esta aberto (precisa saber antes de vender).
+    await expect(repos.caixa.obterAberto(EMPRESA_ID)).resolves.toBeNull();
+
+    // Negado: abrir caixa e lancar movimento manual sao exclusivos de Admin/Gerente.
+    await expect(
+      repos.caixa.abrir({ empresaId: EMPRESA_ID, usuarioId: "usuario-atendente", valorAberturaDinheiro: 100, observacoes: null }),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+  });
+
+  it("Admin/Gerente: abrem caixa, lancam movimento manual e fecham com resumo", async () => {
+    for (const papel of ["admin", "gerente"] as const) {
+      const repos = protegerRepositories(criarRepositoriesLocal(), papel);
+      const caixa = await repos.caixa.abrir({ empresaId: EMPRESA_ID, usuarioId: `usuario-${papel}`, valorAberturaDinheiro: 100, observacoes: null });
+      await expect(
+        repos.movimentosCaixaManual.criar({ empresaId: EMPRESA_ID, caixaId: caixa.id, tipo: "saida", valor: 20, motivo: "Compra de material", registradoPorUsuarioId: `usuario-${papel}` }),
+      ).resolves.toBeTruthy();
+      await expect(repos.caixa.fechar(caixa.id, { usuarioId: `usuario-${papel}`, observacoes: null })).resolves.toMatchObject({ status: "fechado" });
+    }
+  });
+
+  it("Operador: nao opera caixa nem PDV, nem le/altera recebimentos", async () => {
+    const repos = protegerRepositories(criarRepositoriesLocal(), "operador");
+    await expect(repos.caixa.obterAberto(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(
+      repos.pedidos.criarAtendimentoBalcao({ empresaId: EMPRESA_ID, clienteId: null, itens: [], valorTotal: 0, statusEntrega: "concluido" }),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.recebimentos.listarPorPedido("pedido-qualquer")).rejects.toBeInstanceOf(PermissaoNegadaError);
+  });
+});

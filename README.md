@@ -75,11 +75,20 @@ para esse momento, mas não são usadas pelo MVP local — a autenticação atua
 é simulada (usuários, empresa, papéis e permissões seedados) só para validar
 os fluxos.
 
+**Limitação de MVP a conhecer antes de demonstrar o sistema:** links
+públicos por token (`/portal/orcamento/[token]`, `/portal/pedido/[token]`) só
+resolvem no mesmo navegador que criou o registro, porque os dados vivem em
+LocalStorage. Ver **docs/MVP-LOCALSTORAGE.md** para o detalhe e para os dois
+requisitos de design que a migração ao Supabase precisa cumprir (token
+público revogável e validado no servidor; adapter público restrito ao
+recurso do token, nunca um repositório genérico).
+
 ### Documentacao
 
 - docs/00-PRODUCT-VISION.md
 - docs/01-DESIGN-SYSTEM.md
 - docs/02-DOMAIN-MODEL.md
+- docs/MVP-LOCALSTORAGE.md
 - specs/00-ROADMAP.md
 - specs/01-FOUNDATION.md
 - specs/02-CADASTROS.md

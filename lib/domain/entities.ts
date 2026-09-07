@@ -286,18 +286,89 @@ export type EmailEnviado = {
   enviadoEm: string;
 };
 
+// --- SPEC 04: Balcao, PDV e Caixa ------------------------------------------
+//
+// Pedido e o MESMO conceito comercial nasca de onde nascer: e-mail/orcamento
+// aprovado (SPEC 03) ou atendimento de balcao (SPEC 04). "origem" so marca a
+// procedencia; nenhuma tela ou regra de negocio das specs futuras (producao,
+// financeiro) deve precisar saber de onde o pedido veio.
+//
+// Pagamento e modelado como Pedido 1:N Recebimento (nunca um booleano
+// "pago"): um pedido pode ter zero, um ou varios recebimentos (ex.: sinal +
+// saldo na retirada), e "valor recebido"/"saldo pendente" sao sempre
+// calculados a partir da soma dos recebimentos — nunca armazenados, para
+// nao correrem o risco de ficar dessincronizados.
+
+export type OrigemPedido = "email" | "balcao";
+
 /**
- * Registro comercial minimo criado quando um orcamento e aprovado. A
- * decomposicao em Trabalhos e o Kanban pertencem a SPEC 05 — aqui o Pedido
- * so existe para fechar o fluximo "orcamento aprovado -> pedido" exigido
- * por esta SPEC, sem antecipar producao.
+ * "concluido" = atendimento simples finalizado e entregue no proprio balcao
+ * (sem produção). "aguardando_producao" = pedido criado, aguardando a
+ * SPEC 05 (Trabalhos/Kanban) para decompor e executar. Este campo e sobre
+ * ENTREGA, nao sobre pagamento — um pedido pode estar concluido com saldo
+ * pendente, ou aguardando producao já totalmente pago.
  */
+export type StatusEntregaPedido = "aguardando_producao" | "concluido" | "cancelado";
+
 export type Pedido = {
   id: string;
   empresaId: string;
+  /** Nulo = "Consumidor nao identificado" — condicao comercial do atendimento, nunca um registro em Cliente. */
   clienteId: string | null;
-  orcamentoId: string;
+  origem: OrigemPedido;
+  /** So preenchido quando origem = "email" (orcamento aprovado). */
+  orcamentoId: string | null;
+  /** Unico por empresa, formato PED-0001. */
   numero: string;
-  status: "confirmado";
+  itens: OrcamentoItem[];
+  valorTotal: number;
+  statusEntrega: StatusEntregaPedido;
+  /** Token nao sequencial para o comprovante/QR Code publico — mesma limitacao de MVP do orcamento (ver docs/MVP-LOCALSTORAGE.md). */
+  tokenAcompanhamento: string;
   criadoEm: string;
+  concluidoEm: string | null;
+};
+
+export type StatusCaixa = "aberto" | "fechado";
+
+export type Caixa = {
+  id: string;
+  empresaId: string;
+  status: StatusCaixa;
+  abertoPorUsuarioId: string;
+  abertoEm: string;
+  valorAberturaDinheiro: number;
+  observacoesAbertura: string | null;
+  fechadoPorUsuarioId: string | null;
+  fechadoEm: string | null;
+  observacoesFechamento: string | null;
+};
+
+export type TipoMovimentoCaixa = "entrada" | "saida";
+
+/** Entradas/saidas manuais autorizadas (sangria, reforco, pequenas despesas) — nunca um recebimento de pedido. */
+export type MovimentoCaixaManual = {
+  id: string;
+  empresaId: string;
+  caixaId: string;
+  tipo: TipoMovimentoCaixa;
+  valor: number;
+  motivo: string;
+  registradoPorUsuarioId: string;
+  registradoEm: string;
+};
+
+export type Recebimento = {
+  id: string;
+  empresaId: string;
+  pedidoId: string;
+  /** Caixa aberto no momento do registro — recebimento de balcao sempre exige caixa aberto. */
+  caixaId: string;
+  formaPagamentoId: string;
+  valor: number;
+  /** Só relevante quando a forma de pagamento é dinheiro (calculo de troco). */
+  valorEntregueDinheiro: number | null;
+  troco: number | null;
+  registradoPorUsuarioId: string;
+  registradoEm: string;
 };

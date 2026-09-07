@@ -50,6 +50,14 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
   orcamentos: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
   emailsEnviados: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
   pedidos: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
+
+  // SPEC 04 — Balcao, PDV e Caixa. Caixa pode ser lido por quem opera o PDV
+  // (precisa saber se ha caixa aberto), mas so Admin/Gerente abrem, fecham
+  // ou lancam movimentos manuais. Recebimentos seguem o mesmo nivel unico
+  // do PDV — operador nao encosta.
+  caixa: { gerenciar: PERMISSOES.CAIXA_GERENCIAR, visualizar: PERMISSOES.PDV_OPERAR },
+  movimentosCaixaManual: { gerenciar: PERMISSOES.CAIXA_GERENCIAR },
+  recebimentos: { gerenciar: PERMISSOES.PDV_OPERAR },
 };
 
 /**
@@ -66,6 +74,7 @@ const METODOS_LEITURA = new Set([
   "buscarPorEmail",
   "buscarPorDocumento",
   "buscarPorToken",
+  "buscarRapido",
   "listarPorCliente",
   "listarPorContato",
   "listarPorMaterial",
@@ -73,6 +82,10 @@ const METODOS_LEITURA = new Set([
   "listarPorWorkflow",
   "listarPorSolicitacao",
   "listarPorOrcamento",
+  "listarPorPedido",
+  "listarPorCaixa",
+  "obterAberto",
+  "obterResumo",
 ]);
 
 function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: RegraAcesso, papel: Papel | null): T {

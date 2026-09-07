@@ -25,6 +25,12 @@ export const PERMISSOES = {
   // SPEC 03 — Entrada por E-mail e Orcamentos.
   /** CRUD de e-mails recebidos, solicitacoes, orcamentos e leitura de pedidos — atendimento comercial, nao "operacao". */
   SOLICITACOES_GERENCIAR: "solicitacoes_gerenciar",
+
+  // SPEC 04 — Balcao, PDV e Caixa.
+  /** Atendimento de balcao: identificar/cadastrar cliente, montar pedido, registrar recebimentos. */
+  PDV_OPERAR: "pdv_operar",
+  /** Abrir/fechar caixa e lancar entradas/saidas manuais autorizadas — nao inclui recebimentos do PDV (ver PDV_OPERAR). */
+  CAIXA_GERENCIAR: "caixa_gerenciar",
 } as const;
 
 export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
@@ -46,6 +52,14 @@ export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
  * - Operador: leitura dos cadastros necessarios a operacao (servicos,
  *   materiais, equipamentos, workflows) — sem acesso a clientes ou a
  *   cadastros comerciais (fornecedores, formas de pagamento).
+ *
+ * Matriz de Balcao/PDV/Caixa (SPEC 04):
+ * - Admin/Gerente: operacao completa do PDV e do caixa (abrir, fechar,
+ *   entradas/saidas manuais).
+ * - Atendente: PDV, clientes, pedidos e recebimentos operacionais — nao
+ *   abre/fecha caixa nem lanca movimentos manuais.
+ * - Operador: nao opera caixa nem altera recebimentos (sem PDV_OPERAR nem
+ *   CAIXA_GERENCIAR).
  */
 export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
   admin: [
@@ -59,6 +73,8 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
     PERMISSOES.SOLICITACOES_GERENCIAR,
+    PERMISSOES.PDV_OPERAR,
+    PERMISSOES.CAIXA_GERENCIAR,
   ],
   gerente: [
     PERMISSOES.GERENCIAR_USUARIOS,
@@ -68,12 +84,15 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
     PERMISSOES.SOLICITACOES_GERENCIAR,
+    PERMISSOES.PDV_OPERAR,
+    PERMISSOES.CAIXA_GERENCIAR,
   ],
   atendente: [
     PERMISSOES.CLIENTES_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
     PERMISSOES.SOLICITACOES_GERENCIAR,
+    PERMISSOES.PDV_OPERAR,
   ],
   operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR],
 };

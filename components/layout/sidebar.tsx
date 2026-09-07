@@ -28,6 +28,20 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
       <path d="m3 18 1 1 2-2" />
     </>
   ),
+  pdv: (
+    <>
+      <rect x="3" y="7" width="18" height="12" rx="1.5" />
+      <path d="M3 11h18" />
+      <path d="M7 15h4" />
+    </>
+  ),
+  caixa: (
+    <>
+      <rect x="3" y="9" width="18" height="11" rx="1.5" />
+      <path d="M3 13h18" />
+      <path d="M8 6h8l1.5 3h-11z" />
+    </>
+  ),
   inbox: (
     <>
       <path d="M4 5h16v14H4z" />

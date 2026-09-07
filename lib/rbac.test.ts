@@ -69,3 +69,22 @@ describe("papelTemPermissao — Solicitacoes e Orcamentos (SPEC 03)", () => {
     expect(papelTemPermissao("operador", PERMISSOES.SOLICITACOES_GERENCIAR)).toBe(false);
   });
 });
+
+describe("papelTemPermissao — Balcao, PDV e Caixa (SPEC 04)", () => {
+  it("admin e gerente operam o PDV e o caixa (abrir/fechar/movimentos manuais)", () => {
+    for (const papel of ["admin", "gerente"] as const) {
+      expect(papelTemPermissao(papel, PERMISSOES.PDV_OPERAR)).toBe(true);
+      expect(papelTemPermissao(papel, PERMISSOES.CAIXA_GERENCIAR)).toBe(true);
+    }
+  });
+
+  it("atendente opera o PDV (clientes, pedidos, recebimentos), mas nao abre/fecha caixa", () => {
+    expect(papelTemPermissao("atendente", PERMISSOES.PDV_OPERAR)).toBe(true);
+    expect(papelTemPermissao("atendente", PERMISSOES.CAIXA_GERENCIAR)).toBe(false);
+  });
+
+  it("operador nao opera caixa nem altera recebimentos", () => {
+    expect(papelTemPermissao("operador", PERMISSOES.PDV_OPERAR)).toBe(false);
+    expect(papelTemPermissao("operador", PERMISSOES.CAIXA_GERENCIAR)).toBe(false);
+  });
+});
