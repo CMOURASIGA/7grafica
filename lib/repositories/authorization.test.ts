@@ -112,3 +112,50 @@ describe("RBAC dos Cadastros — repositorio (lib/repositories/authorization.ts)
     await expect(repos.servicos.listar(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
   });
 });
+
+describe("RBAC de Solicitacoes/Orcamentos (SPEC 03) — repositorio", () => {
+  beforeEach(() => {
+    limparNamespace();
+  });
+
+  it("Atendente: pode criar solicitacao e enviar orcamento (metodo customizado tratado como escrita)", async () => {
+    const repos = protegerRepositories(criarRepositoriesLocal(), "atendente");
+
+    const solicitacao = await repos.solicitacoes.criar({
+      empresaId: EMPRESA_ID,
+      origem: "email",
+      emailOrigemId: null,
+      clienteId: null,
+      contatoId: null,
+      assunto: "Teste",
+      descricao: "Teste",
+      status: "nova",
+    });
+    expect(solicitacao.id).toBeTruthy();
+
+    const orcamento = await repos.orcamentos.criar({
+      empresaId: EMPRESA_ID,
+      solicitacaoId: solicitacao.id,
+      clienteId: null,
+      versao: 1,
+      itens: [],
+      prazoEntregaDias: null,
+      validadeAte: null,
+      observacoes: null,
+      valorTotal: 0,
+    });
+    await expect(repos.orcamentos.enviarPorEmail(orcamento.id, "cliente@exemplo.com")).resolves.toMatchObject({
+      orcamento: { status: "enviado" },
+    });
+  });
+
+  it("Operador: nao acessa nada de atendimento (e-mails, solicitacoes, orcamentos, pedidos)", async () => {
+    const repos = protegerRepositories(criarRepositoriesLocal(), "operador");
+    await expect(repos.emailsRecebidos.listar(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.solicitacoes.listar(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.orcamentos.listar(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.pedidos.listar(EMPRESA_ID)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    // Continua lendo o que sempre pode (cadastros operacionais) — a restricao e so a atendimento.
+    await expect(repos.servicos.listar(EMPRESA_ID)).resolves.toEqual([]);
+  });
+});

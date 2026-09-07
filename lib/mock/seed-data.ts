@@ -5,6 +5,8 @@ import type {
   Contato,
   ConversaoUnidade,
   EmailContato,
+  EmailEnviado,
+  EmailRecebido,
   Empresa,
   EmpresaUsuario,
   Equipamento,
@@ -12,7 +14,10 @@ import type {
   FormaPagamento,
   Fornecedor,
   Material,
+  Orcamento,
+  Pedido,
   Servico,
+  Solicitacao,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -175,4 +180,129 @@ export const etapasWorkflowSeed: EtapaWorkflow[] = [
   { id: "etapa-2-1", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 1, nome: "Aprovacao de arte", tipo: "humana" },
   { id: "etapa-2-2", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 2, nome: "Impressao plotter", tipo: "automatica" },
   { id: "etapa-2-3", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 3, nome: "Acabamento e instalacao", tipo: "hibrida" },
+];
+
+// --- SPEC 03: Entrada por E-mail e Orcamentos ------------------------------
+//
+// Continua o MESMO dataset: os clientes/contatos/servicos/materiais abaixo
+// sao os ja seedados acima (cliente-1/contato-1, cliente-2/contato-2,
+// servico-1, material-1) — nenhuma massa nova e independente. Um e-mail
+// (email-in-3) ja percorreu o fluxo completo ate Pedido, para validar a
+// cadeia inteira; os outros dois ficam "em aberto" para o atendente
+// processar manualmente (um identificado, um nao identificado).
+
+export const emailsRecebidosSeed: EmailRecebido[] = [
+  {
+    id: "email-in-1",
+    empresaId: EMPRESA_DEMO_ID,
+    remetente: "contato@grafitestudio.com.br",
+    assunto: "Orcamento para 500 sacolas personalizadas",
+    corpo: "Boa tarde, gostaria de um orcamento para 500 sacolas de papel kraft com nossa logo em 1 cor. Podem me passar valores?",
+    anexos: [{ nome: "logo-grafite.png" }],
+    recebidoEm: "2026-03-01T13:20:00.000Z",
+    clienteId: null,
+    contatoId: null,
+    solicitacaoId: null,
+    status: "novo",
+  },
+  {
+    id: "email-in-2",
+    empresaId: EMPRESA_DEMO_ID,
+    remetente: "marcos@corpoativo.com",
+    assunto: "Banners para inauguracao da nova unidade",
+    corpo: "Ola! Vamos abrir uma nova unidade e precisamos de 3 banners grandes para a fachada. Consegue me orcar?",
+    anexos: [],
+    recebidoEm: "2026-03-03T09:05:00.000Z",
+    clienteId: "cliente-2",
+    contatoId: "contato-2",
+    solicitacaoId: null,
+    status: "vinculado",
+  },
+  {
+    id: "email-in-3",
+    empresaId: EMPRESA_DEMO_ID,
+    remetente: "fernanda@saborcia.com.br",
+    assunto: "Cartoes de visita novos",
+    corpo: "Precisamos renovar os cartoes de visita da equipe de vendas. Pode orcar 200 unidades com verniz localizado?",
+    anexos: [{ nome: "arte-cartao-sabor.pdf" }],
+    recebidoEm: "2026-02-18T10:00:00.000Z",
+    clienteId: "cliente-1",
+    contatoId: "contato-1",
+    solicitacaoId: "solic-1",
+    status: "vinculado",
+  },
+];
+
+export const solicitacoesSeed: Solicitacao[] = [
+  {
+    id: "solic-1",
+    empresaId: EMPRESA_DEMO_ID,
+    origem: "email",
+    emailOrigemId: "email-in-3",
+    clienteId: "cliente-1",
+    contatoId: "contato-1",
+    assunto: "Cartoes de visita novos",
+    descricao: "Renovacao de 200 cartoes de visita da equipe de vendas, com verniz localizado.",
+    status: "orcamento_criado",
+    criadaEm: "2026-02-18T10:15:00.000Z",
+  },
+];
+
+export const orcamentosSeed: Orcamento[] = [
+  {
+    id: "orc-1",
+    empresaId: EMPRESA_DEMO_ID,
+    solicitacaoId: "solic-1",
+    clienteId: "cliente-1",
+    numero: "ORC-0001",
+    versao: 1,
+    orcamentoOrigemId: "orc-1",
+    itens: [
+      {
+        id: "orc-1-item-1",
+        descricao: "Cartao de visita 300g, verniz localizado",
+        quantidade: 2,
+        servicoId: "servico-1",
+        materialId: "material-1",
+        acabamentos: "Verniz localizado frente",
+        precoUnitario: 90,
+      },
+    ],
+    prazoEntregaDias: 5,
+    validadeAte: "2026-03-05T23:59:59.000Z",
+    observacoes: "Manter identidade visual atual (logo e cores).",
+    valorTotal: 180,
+    status: "aprovado",
+    tokenAcompanhamento: "demo-token-orc-0001",
+    justificativaCliente: null,
+    motivoRejeicao: null,
+    criadoEm: "2026-02-18T11:00:00.000Z",
+    enviadoEm: "2026-02-18T11:05:00.000Z",
+    decididoEm: "2026-02-19T08:30:00.000Z",
+  },
+];
+
+export const emailsEnviadosSeed: EmailEnviado[] = [
+  {
+    id: "email-out-1",
+    empresaId: EMPRESA_DEMO_ID,
+    orcamentoId: "orc-1",
+    destinatario: "fernanda@saborcia.com.br",
+    assunto: "Orcamento ORC-0001 (V1) — 7Grafica",
+    corpo: "Seu orcamento esta pronto. Acesse o link para aprovar, pedir ajuste ou recusar: /portal/orcamento/demo-token-orc-0001",
+    link: "/portal/orcamento/demo-token-orc-0001",
+    enviadoEm: "2026-02-18T11:05:00.000Z",
+  },
+];
+
+export const pedidosSeed: Pedido[] = [
+  {
+    id: "pedido-1",
+    empresaId: EMPRESA_DEMO_ID,
+    clienteId: "cliente-1",
+    orcamentoId: "orc-1",
+    numero: "PED-0001",
+    status: "confirmado",
+    criadoEm: "2026-02-19T08:31:00.000Z",
+  },
 ];

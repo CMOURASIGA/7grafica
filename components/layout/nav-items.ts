@@ -4,17 +4,39 @@ export type NavItem = {
   section: string;
   href: string;
   label: string;
-  icon: "home" | "settings" | "audit" | "cadastros";
+  icon: "home" | "settings" | "audit" | "cadastros" | "inbox" | "orcamento" | "pedido";
   /** Quando definido, o item so aparece se o usuario tiver essa permissao na empresa ativa. */
   permissaoRequerida?: Permissao;
 };
 
-// Navegacao atual. SPEC 02 adiciona "Cadastros" — nenhum outro modulo de
-// negocio (pedidos, PDV, kanban, estoque, financeiro, portal) entra aqui
+// Navegacao atual. SPEC 02 adicionou "Cadastros"; SPEC 03 adiciona
+// "Atendimento" (caixa de entrada, orcamentos, pedidos). Nenhum outro
+// modulo de negocio (PDV, kanban, estoque, financeiro, portal) entra aqui
 // antes da respectiva SPEC.
 export const NAV_ITEMS: NavItem[] = [
   { section: "Principal", href: "/", label: "Inicio", icon: "home" },
   { section: "Principal", href: "/cadastros", label: "Cadastros", icon: "cadastros" },
+  {
+    section: "Atendimento",
+    href: "/solicitacoes",
+    label: "Caixa de entrada",
+    icon: "inbox",
+    permissaoRequerida: PERMISSOES.SOLICITACOES_GERENCIAR,
+  },
+  {
+    section: "Atendimento",
+    href: "/orcamentos",
+    label: "Orcamentos",
+    icon: "orcamento",
+    permissaoRequerida: PERMISSOES.SOLICITACOES_GERENCIAR,
+  },
+  {
+    section: "Atendimento",
+    href: "/pedidos",
+    label: "Pedidos",
+    icon: "pedido",
+    permissaoRequerida: PERMISSOES.SOLICITACOES_GERENCIAR,
+  },
   {
     section: "Sistema",
     href: "/configuracoes",

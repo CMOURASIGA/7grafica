@@ -57,3 +57,15 @@ describe("papelTemPermissao — Cadastros (SPEC 02)", () => {
     expect(papelTemPermissao("operador", PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR)).toBe(true);
   });
 });
+
+describe("papelTemPermissao — Solicitacoes e Orcamentos (SPEC 03)", () => {
+  it("admin, gerente e atendente atendem e-mails/solicitacoes/orcamentos", () => {
+    for (const papel of ["admin", "gerente", "atendente"] as const) {
+      expect(papelTemPermissao(papel, PERMISSOES.SOLICITACOES_GERENCIAR)).toBe(true);
+    }
+  });
+
+  it("operador nao acessa solicitacoes/orcamentos — nao e atendimento", () => {
+    expect(papelTemPermissao("operador", PERMISSOES.SOLICITACOES_GERENCIAR)).toBe(false);
+  });
+});

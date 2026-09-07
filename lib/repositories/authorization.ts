@@ -41,10 +41,39 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
   capacidadesEquipamento: { gerenciar: PERMISSOES.CADASTROS_GERENCIAR, visualizar: PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR },
   workflows: { gerenciar: PERMISSOES.CADASTROS_GERENCIAR, visualizar: PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR },
   etapasWorkflow: { gerenciar: PERMISSOES.CADASTROS_GERENCIAR, visualizar: PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR },
+
+  // SPEC 03 — Entrada por E-mail e Orcamentos. Um unico nivel (como
+  // clientes): quem atende (admin/gerente/atendente) le e escreve; operador
+  // nao acessa nada disso (nao e "necessario a operacao").
+  emailsRecebidos: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
+  solicitacoes: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
+  orcamentos: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
+  emailsEnviados: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
+  pedidos: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR },
 };
 
-/** Metodos de escrita em qualquer CrudRepository — exigem a permissao "gerenciar". */
-const METODOS_ESCRITA = new Set(["criar", "atualizar", "remover"]);
+/**
+ * Metodos de leitura conhecidos — tudo o que NAO estiver nesta lista e
+ * tratado como escrita (exige "gerenciar"). Fail-safe de proposito: um
+ * metodo novo de repositorio (ex.: enviarPorEmail, criarNovaVersao,
+ * registrarDecisaoPublica, criarAPartirDeOrcamentoAprovado) e bloqueado por
+ * padrao ate ser explicitamente listado aqui como leitura — nunca o
+ * contrario.
+ */
+const METODOS_LEITURA = new Set([
+  "listar",
+  "obter",
+  "buscarPorEmail",
+  "buscarPorDocumento",
+  "buscarPorToken",
+  "listarPorCliente",
+  "listarPorContato",
+  "listarPorMaterial",
+  "listarPorEquipamento",
+  "listarPorWorkflow",
+  "listarPorSolicitacao",
+  "listarPorOrcamento",
+]);
 
 function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: RegraAcesso, papel: Papel | null): T {
   return new Proxy(alvo, {
@@ -60,7 +89,7 @@ function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: Reg
       // ou nao.
       return async (...args: unknown[]) => {
         const metodo = String(propriedade);
-        const ehEscrita = METODOS_ESCRITA.has(metodo);
+        const ehEscrita = !METODOS_LEITURA.has(metodo);
         const permissaoNecessaria = ehEscrita ? regra.gerenciar : regra.visualizar ?? regra.gerenciar;
 
         if (!papel || !papelTemPermissao(papel, permissaoNecessaria)) {

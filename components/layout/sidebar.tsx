@@ -28,6 +28,26 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
       <path d="m3 18 1 1 2-2" />
     </>
   ),
+  inbox: (
+    <>
+      <path d="M4 5h16v14H4z" />
+      <path d="m4 6 8 7 8-7" />
+    </>
+  ),
+  orcamento: (
+    <>
+      <path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 13h6" />
+      <path d="M9 17h4" />
+    </>
+  ),
+  pedido: (
+    <>
+      <path d="M4 7h6l2 2h8v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" />
+      <path d="m9 13 2 2 4-4" />
+    </>
+  ),
   cadastros: (
     <>
       <rect x="4" y="4" width="7" height="7" rx="1.2" />

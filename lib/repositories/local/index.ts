@@ -21,6 +21,11 @@ import { criarEmailContatoRepositoryLocal } from "@/lib/repositories/local/email
 import { criarConversaoUnidadeRepositoryLocal } from "@/lib/repositories/local/conversoes-unidade";
 import { criarCapacidadeEquipamentoRepositoryLocal } from "@/lib/repositories/local/capacidades-equipamento";
 import { criarEtapaWorkflowRepositoryLocal } from "@/lib/repositories/local/etapas-workflow";
+import { criarEmailRecebidoRepositoryLocal } from "@/lib/repositories/local/emails-recebidos";
+import { criarSolicitacaoRepositoryLocal } from "@/lib/repositories/local/solicitacoes";
+import { criarOrcamentoRepositoryLocal } from "@/lib/repositories/local/orcamentos";
+import { criarEmailEnviadoRepositoryLocal } from "@/lib/repositories/local/emails-enviados";
+import { criarPedidoRepositoryLocal } from "@/lib/repositories/local/pedidos";
 
 /**
  * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
@@ -50,5 +55,11 @@ export function criarRepositoriesLocal(): Repositories {
     formasPagamento: criarCrudLocal<FormaPagamento, Omit<FormaPagamento, "id">>("formas_pagamento", "fp"),
     workflows: criarCrudLocal<Workflow, Omit<Workflow, "id">>("workflows", "workflow"),
     etapasWorkflow: criarEtapaWorkflowRepositoryLocal(),
+
+    emailsRecebidos: criarEmailRecebidoRepositoryLocal(),
+    solicitacoes: criarSolicitacaoRepositoryLocal(),
+    orcamentos: criarOrcamentoRepositoryLocal(),
+    emailsEnviados: criarEmailEnviadoRepositoryLocal(),
+    pedidos: criarPedidoRepositoryLocal(),
   };
 }

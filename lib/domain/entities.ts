@@ -186,3 +186,118 @@ export type EtapaWorkflow = {
   nome: string;
   tipo: TipoEtapa;
 };
+
+// --- SPEC 03: Entrada por E-mail e Orcamentos ------------------------------
+
+export type StatusEmailRecebido = "novo" | "vinculado" | "ignorado";
+
+export type EmailRecebido = {
+  id: string;
+  empresaId: string;
+  remetente: string;
+  assunto: string;
+  corpo: string;
+  anexos: { nome: string }[];
+  recebidoEm: string;
+  /** Preenchido quando o remetente bate com um e-mail de contato cadastrado (busca exata). */
+  clienteId: string | null;
+  contatoId: string | null;
+  solicitacaoId: string | null;
+  status: StatusEmailRecebido;
+};
+
+export type StatusSolicitacao = "nova" | "em_analise" | "orcamento_criado" | "encerrada";
+
+export type Solicitacao = {
+  id: string;
+  empresaId: string;
+  /** Unico canal implementado nesta SPEC. balcao/portal chegam nas specs 04/10 sem exigir mudanca de modelo. */
+  origem: "email";
+  emailOrigemId: string | null;
+  /** Nulo = "Cliente nao identificado" — nunca criado automaticamente (regra de produto). */
+  clienteId: string | null;
+  contatoId: string | null;
+  assunto: string;
+  descricao: string;
+  status: StatusSolicitacao;
+  criadaEm: string;
+};
+
+export type StatusOrcamento =
+  | "rascunho"
+  | "enviado"
+  | "aprovado"
+  | "alteracao_solicitada"
+  | "rejeitado"
+  | "expirado"
+  | "cancelado";
+
+export type MotivoRejeicaoOrcamento =
+  | "preco_alto"
+  | "prazo_incompativel"
+  | "nao_precisa_mais"
+  | "concorrencia"
+  | "outro";
+
+export type OrcamentoItem = {
+  id: string;
+  descricao: string;
+  quantidade: number;
+  servicoId: string | null;
+  materialId: string | null;
+  acabamentos: string | null;
+  precoUnitario: number;
+};
+
+export type Orcamento = {
+  id: string;
+  empresaId: string;
+  solicitacaoId: string;
+  clienteId: string | null;
+  /** Unico dentro da empresa, formato ORC-0001. */
+  numero: string;
+  /** V1, V2, V3... — nova versao criada a partir de alteracao solicitada. */
+  versao: number;
+  /** Encadeia as versoes do mesmo orcamento comercial. Na V1, aponta para o proprio id. */
+  orcamentoOrigemId: string;
+  itens: OrcamentoItem[];
+  prazoEntregaDias: number | null;
+  validadeAte: string | null;
+  observacoes: string | null;
+  valorTotal: number;
+  status: StatusOrcamento;
+  /** Token nao sequencial (crypto.randomUUID) — requisito de seguranca da Foundation. */
+  tokenAcompanhamento: string;
+  justificativaCliente: string | null;
+  motivoRejeicao: MotivoRejeicaoOrcamento | null;
+  criadoEm: string;
+  enviadoEm: string | null;
+  decididoEm: string | null;
+};
+
+export type EmailEnviado = {
+  id: string;
+  empresaId: string;
+  orcamentoId: string;
+  destinatario: string;
+  assunto: string;
+  corpo: string;
+  link: string;
+  enviadoEm: string;
+};
+
+/**
+ * Registro comercial minimo criado quando um orcamento e aprovado. A
+ * decomposicao em Trabalhos e o Kanban pertencem a SPEC 05 — aqui o Pedido
+ * so existe para fechar o fluximo "orcamento aprovado -> pedido" exigido
+ * por esta SPEC, sem antecipar producao.
+ */
+export type Pedido = {
+  id: string;
+  empresaId: string;
+  clienteId: string | null;
+  orcamentoId: string;
+  numero: string;
+  status: "confirmado";
+  criadoEm: string;
+};

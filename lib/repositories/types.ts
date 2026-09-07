@@ -14,6 +14,8 @@ import type {
   Contato,
   ConversaoUnidade,
   EmailContato,
+  EmailEnviado,
+  EmailRecebido,
   Empresa,
   EmpresaUsuario,
   Equipamento,
@@ -23,8 +25,12 @@ import type {
   Fornecedor,
   FormaPagamento,
   Material,
+  MotivoRejeicaoOrcamento,
+  Orcamento,
   Papel,
+  Pedido,
   Servico,
+  Solicitacao,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -108,6 +114,59 @@ export type EtapaWorkflowRepository = CrudRepository<EtapaWorkflow, Omit<EtapaWo
   listarPorWorkflow(workflowId: string): Promise<EtapaWorkflow[]>;
 };
 
+// --- SPEC 03: Entrada por E-mail e Orcamentos ------------------------------
+
+export type EmailRecebidoRepository = CrudRepository<EmailRecebido, Omit<EmailRecebido, "id">>;
+
+export type SolicitacaoRepository = CrudRepository<Solicitacao, Omit<Solicitacao, "id" | "criadaEm">>;
+
+export type DecisaoOrcamento = "aprovado" | "alteracao_solicitada" | "rejeitado";
+
+export type OrcamentoRepository = CrudRepository<
+  Orcamento,
+  Omit<
+    Orcamento,
+    | "id"
+    | "criadoEm"
+    | "numero"
+    | "tokenAcompanhamento"
+    | "orcamentoOrigemId"
+    | "status"
+    | "enviadoEm"
+    | "decididoEm"
+    | "justificativaCliente"
+    | "motivoRejeicao"
+  >
+> & {
+  buscarPorToken(token: string): Promise<Orcamento | null>;
+  listarPorSolicitacao(solicitacaoId: string): Promise<Orcamento[]>;
+  /** Marca como enviado, gera o link de acompanhamento e grava o log em EmailEnviado. */
+  enviarPorEmail(orcamentoId: string, destinatario: string): Promise<{ orcamento: Orcamento; link: string }>;
+  /** Cria a V2/V3... a partir da versao anterior (copia itens), preservando orcamentoOrigemId. */
+  criarNovaVersao(orcamentoAnteriorId: string): Promise<Orcamento>;
+  /**
+   * Acesso publico (via token, sem sessao) usado pela pagina de decisao do
+   * cliente. So aceita transicao a partir de "enviado" — nao e um
+   * atualizar() generico exposto ao publico.
+   */
+  registrarDecisaoPublica(
+    token: string,
+    decisao: DecisaoOrcamento,
+    detalhe?: { justificativa?: string; motivo?: MotivoRejeicaoOrcamento },
+  ): Promise<Orcamento>;
+};
+
+export type EmailEnviadoRepository = {
+  listarPorOrcamento(orcamentoId: string): Promise<EmailEnviado[]>;
+};
+
+export type PedidoRepository = {
+  listar(empresaId: string): Promise<Pedido[]>;
+  obter(id: string): Promise<Pedido | null>;
+  /** Unica forma de criar um Pedido: sempre a partir de um Orcamento aprovado (regra de produto). */
+  criarAPartirDeOrcamentoAprovado(orcamentoId: string): Promise<Pedido>;
+};
+
 export type Repositories = {
   empresas: EmpresaRepository;
   usuarios: UsuarioRepository;
@@ -128,4 +187,10 @@ export type Repositories = {
   formasPagamento: FormaPagamentoRepository;
   workflows: WorkflowRepository;
   etapasWorkflow: EtapaWorkflowRepository;
+
+  emailsRecebidos: EmailRecebidoRepository;
+  solicitacoes: SolicitacaoRepository;
+  orcamentos: OrcamentoRepository;
+  emailsEnviados: EmailEnviadoRepository;
+  pedidos: PedidoRepository;
 };

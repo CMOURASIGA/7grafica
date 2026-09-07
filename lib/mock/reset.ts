@@ -9,6 +9,8 @@ import {
   conversoesUnidadeSeed,
   credenciaisDemoSeed,
   emailsContatoSeed,
+  emailsEnviadosSeed,
+  emailsRecebidosSeed,
   empresasSeed,
   empresaUsuariosSeed,
   equipamentosSeed,
@@ -16,7 +18,10 @@ import {
   fornecedoresSeed,
   formasPagamentoSeed,
   materiaisSeed,
+  orcamentosSeed,
+  pedidosSeed,
   servicosSeed,
+  solicitacoesSeed,
   unidadesMedidaSeed,
   usuariosPerfilSeed,
   workflowsSeed,
@@ -51,9 +56,18 @@ export function restaurarDadosDemo(): void {
   gravarColecao("formas_pagamento", formasPagamentoSeed);
   gravarColecao("workflows", workflowsSeed);
   gravarColecao("etapas_workflow", etapasWorkflowSeed);
+
+  gravarColecao("emails_recebidos", emailsRecebidosSeed);
+  gravarColecao("solicitacoes", solicitacoesSeed);
+  gravarColecao("orcamentos", orcamentosSeed);
+  gravarColecao("emails_enviados", emailsEnviadosSeed);
+  gravarColecao("pedidos", pedidosSeed);
 }
 
-const CHAVE_BOOTSTRAP = "bootstrap_v1";
+// v2: adiciona o dataset da SPEC 03 (e-mails, solicitacoes, orcamentos,
+// pedidos) — incrementado para que sessoes que ja tinham feito bootstrap
+// da v1 (so Foundation + Cadastros) recebam os dados novos automaticamente.
+const CHAVE_BOOTSTRAP = "bootstrap_v2";
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {

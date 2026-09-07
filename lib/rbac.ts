@@ -21,6 +21,10 @@ export const PERMISSOES = {
   CADASTROS_COMERCIAIS_VISUALIZAR: "cadastros_comerciais_visualizar",
   /** Leitura de cadastros operacionais (servicos, materiais, equipamentos, workflows) — o minimo que a producao precisa ver. */
   CADASTROS_OPERACIONAIS_VISUALIZAR: "cadastros_operacionais_visualizar",
+
+  // SPEC 03 — Entrada por E-mail e Orcamentos.
+  /** CRUD de e-mails recebidos, solicitacoes, orcamentos e leitura de pedidos — atendimento comercial, nao "operacao". */
+  SOLICITACOES_GERENCIAR: "solicitacoes_gerenciar",
 } as const;
 
 export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
@@ -54,6 +58,7 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CADASTROS_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
+    PERMISSOES.SOLICITACOES_GERENCIAR,
   ],
   gerente: [
     PERMISSOES.GERENCIAR_USUARIOS,
@@ -62,11 +67,13 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CADASTROS_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
+    PERMISSOES.SOLICITACOES_GERENCIAR,
   ],
   atendente: [
     PERMISSOES.CLIENTES_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
+    PERMISSOES.SOLICITACOES_GERENCIAR,
   ],
   operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR],
 };
