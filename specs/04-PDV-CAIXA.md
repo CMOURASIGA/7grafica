@@ -1,51 +1,51 @@
 # SPEC 04 - Balcao, PDV e Caixa
 
+**Status: CONCLUIDA E VALIDADA**
+
 ## Objetivo
-Atender demandas presenciais sem dependencia de integracao bancaria.
+Atender demandas presenciais, gerar o mesmo Pedido do fluxo comercial, registrar recebimentos e controlar caixa sem dependencia bancaria.
 
-## PDV
-- novo atendimento
-- cliente opcional
-- Consumidor nao identificado
-- servico
-- arquivos
-- quantidade
-- materiais
-- acabamentos
-- valor
-- aceite
-- forma de pagamento
-- status de pagamento
+## PDV entregue
 
-## Formas de pagamento
-- dinheiro
-- pix
-- debito
-- credito
-- boleto
-- outro
+Fluxo `/pdv`: identificar cliente existente, cadastro rapido ou consumidor nao identificado -> servicos/quantidade/material/acabamento -> confirmar Pedido -> registrar recebimento -> comprovante.
 
-O sistema apenas registra. Nao processa pagamento.
+Busca de cliente por nome, CPF/CNPJ, telefone ou e-mail. `Consumidor nao identificado` nao cria registro em Clientes.
 
-## Comprovante
-Gerar Comprovante de Pedido / Atendimento com:
-- numero do pedido
-- data
-- itens
-- valor
-- pagamento
-- previsao
-- codigo seguro
-- QR Code para acompanhamento
+## Pedido e recebimentos
 
-Nao usar o termo cupom fiscal.
+- Pedido e o mesmo conceito independentemente da origem.
+- `origem: email | balcao` e somente metadado.
+- Pedido possui **1:N Recebimentos**.
+- Nao existe booleano `pago` como fonte de verdade.
+- Valor recebido = soma dos recebimentos.
+- Saldo pendente = total do Pedido - soma dos recebimentos.
+- Pagamento parcial/sinal e complementacao posterior sao suportados.
+- Dinheiro calcula troco.
+- Situacao financeira e situacao operacional sao independentes; saldo zero nao libera producao automaticamente.
 
 ## Caixa
-- abertura
-- entradas
-- saidas manuais autorizadas
-- fechamento
-- resumo por forma de pagamento
-- total do dia
-- ticket medio
-- visao diaria, semanal, mensal e por periodo
+
+- Abertura e fechamento.
+- Entradas/saidas manuais autorizadas separadas de recebimentos.
+- Resumo por forma de pagamento.
+- Saldo em dinheiro separado de cartao/Pix/etc.
+- Ticket medio e historico.
+
+## Comprovante
+
+Pagina publica `/portal/pedido/[token]` com QR Code/token. Usar sempre `Comprovante do Pedido` ou `Comprovante de Atendimento`; nunca `cupom fiscal`.
+
+## RBAC
+
+- `PDV_OPERAR`: admin, gerente e atendente.
+- `CAIXA_GERENCIAR`: admin e gerente.
+- Operador nao altera caixa/recebimentos.
+- Enforcement na camada de repositorio/autorizacao.
+
+## Limitacao do MVP
+
+QR/link publico permanece limitado ao mesmo navegador por causa do LocalStorage. Ver `docs/MVP-LOCALSTORAGE.md`.
+
+## Criterio de aceite atingido
+
+Venda imediata, cliente identificado com sinal/saldo, cadastro rapido, Pix registrado, multiplos recebimentos e fechamento de caixa foram validados. A SPEC 04 esta encerrada.
