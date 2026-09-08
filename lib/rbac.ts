@@ -37,6 +37,12 @@ export const PERMISSOES = {
   PRODUCAO_GERENCIAR: "producao_gerenciar",
   /** Ler Trabalhos/Kanban. Operador tambem executa transicoes, mas so nos Trabalhos em que e responsavel (ver lib/repositories/authorization.ts). */
   PRODUCAO_CONSULTAR: "producao_consultar",
+
+  // SPEC 07 — Arquivos e Arte.
+  /** Gerenciamento completo de arquivos: aprovacao tecnica, liberacao para producao, enviar para aprovacao do cliente, nova versao. */
+  ARQUIVOS_GERENCIAR: "arquivos_gerenciar",
+  /** Ler arquivos/versoes/aprovacoes. Atendente tambem anexa/recebe arquivos e nova versao (excecao pontual, ver lib/repositories/authorization.ts). */
+  ARQUIVOS_CONSULTAR: "arquivos_consultar",
 } as const;
 
 export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
@@ -89,6 +95,22 @@ export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
  *   lib/repositories/authorization.ts, a mesma excecao por registro —
  *   iniciar preparo/execucao, pausar, retomar e concluir a alocacao cujo
  *   Trabalho e o responsavel. Nunca cria nem realoca.
+ *
+ * Arquivos e Arte (SPEC 07):
+ * - Admin/Gerente (ARQUIVOS_GERENCIAR): gerenciamento completo — aprovacao
+ *   tecnica, enviar para aprovacao do cliente, liberar arquivo para
+ *   producao (Trabalho.arquivoLiberadoId), nova versao.
+ * - Atendente (so ARQUIVOS_CONSULTAR na matriz, com excecao pontual em
+ *   lib/repositories/authorization.ts): "anexar/receber arquivos e
+ *   acompanhar aprovacao" — pode `receber`, `criarNovaVersao` e
+ *   `enviarParaAprovacaoCliente`, mas NUNCA aprovar/rejeitar tecnicamente
+ *   nem liberar para producao (isso e "gerenciamento completo").
+ * - Operador (so ARQUIVOS_CONSULTAR): consulta arquivos/versoes/aprovacoes
+ *   dos Trabalhos que executa — nunca escreve.
+ * A liberacao explicita do arquivo para producao
+ * (TrabalhoRepository.liberarArquivoParaProducao) exige PRODUCAO_GERENCIAR
+ * (mesma permissao que ja controla escrita em Trabalho — nunca aberta ao
+ * Operador, mesmo sendo ele o responsavel).
  */
 export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
   admin: [
@@ -106,6 +128,8 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CAIXA_GERENCIAR,
     PERMISSOES.PRODUCAO_GERENCIAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ARQUIVOS_GERENCIAR,
+    PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
   gerente: [
     PERMISSOES.GERENCIAR_USUARIOS,
@@ -119,6 +143,8 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CAIXA_GERENCIAR,
     PERMISSOES.PRODUCAO_GERENCIAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ARQUIVOS_GERENCIAR,
+    PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
   atendente: [
     PERMISSOES.CLIENTES_GERENCIAR,
@@ -127,8 +153,9 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.SOLICITACOES_GERENCIAR,
     PERMISSOES.PDV_OPERAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
-  operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR, PERMISSOES.PRODUCAO_CONSULTAR],
+  operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR, PERMISSOES.PRODUCAO_CONSULTAR, PERMISSOES.ARQUIVOS_CONSULTAR],
 };
 
 export function papelTemPermissao(papel: Papel, permissao: Permissao): boolean {

@@ -125,6 +125,12 @@ export default function WorkflowsPage() {
           { name: "ordem", label: "Ordem", tipo: "numero", obrigatorio: true },
           { name: "nome", label: "Nome da etapa", tipo: "texto", obrigatorio: true },
           { name: "tipo", label: "Tipo", tipo: "select", obrigatorio: true, opcoes: TIPOS_ETAPA },
+          {
+            name: "exigeArquivoLiberado",
+            label: "Exige arquivo liberado",
+            tipo: "checkbox",
+            placeholder: "Só entra nesta etapa com um arquivo explicitamente liberado para produção",
+          },
         ]}
         itens={[...etapas].sort((a, b) => nomeWorkflow(a.workflowId).localeCompare(nomeWorkflow(b.workflowId)) || a.ordem - b.ordem)}
         colunas={[
@@ -132,12 +138,14 @@ export default function WorkflowsPage() {
           { chave: "ordem", titulo: "Ordem", render: (item) => String(item.ordem) },
           { chave: "nome", titulo: "Etapa", render: (item) => item.nome },
           { chave: "tipo", titulo: "Tipo", render: (item) => TIPOS_ETAPA.find((tipo) => tipo.value === item.tipo)?.label ?? item.tipo },
+          { chave: "exigeArquivo", titulo: "Exige arquivo", render: (item) => (item.exigeArquivoLiberado ? "Sim" : "Não") },
         ]}
         valoresParaEdicao={(item) => ({
           workflowId: item.workflowId,
           ordem: String(item.ordem),
           nome: item.nome,
           tipo: item.tipo,
+          exigeArquivoLiberado: item.exigeArquivoLiberado,
         })}
         aoCriar={async (dados) => {
           await repositories.etapasWorkflow.criar({
@@ -146,6 +154,7 @@ export default function WorkflowsPage() {
             ordem: Number(dados.ordem) || 0,
             nome: String(dados.nome),
             tipo: dados.tipo as TipoEtapa,
+            exigeArquivoLiberado: Boolean(dados.exigeArquivoLiberado),
           });
           await recarregar();
         }}
@@ -155,6 +164,7 @@ export default function WorkflowsPage() {
             ordem: Number(dados.ordem) || 0,
             nome: String(dados.nome),
             tipo: dados.tipo as TipoEtapa,
+            exigeArquivoLiberado: Boolean(dados.exigeArquivoLiberado),
           });
           await recarregar();
         }}

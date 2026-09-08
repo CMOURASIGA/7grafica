@@ -116,6 +116,23 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
       return trabalho?.responsavelUsuarioId === usuarioId;
     },
   },
+
+  // SPEC 07 — Arquivos e Arte. "Gerenciamento completo" (aprovar/rejeitar
+  // tecnicamente, enviar para aprovacao do cliente, nova versao) e exclusivo
+  // de ARQUIVOS_GERENCIAR (admin/gerente). Todos os papeis leem
+  // (ARQUIVOS_CONSULTAR). Atendente ganha uma excecao pontual — "anexar/
+  // receber arquivos e acompanhar aprovacao" — mas NUNCA aprova/rejeita
+  // tecnicamente. A liberacao para producao vive em `trabalhos` (regra
+  // acima), sob PRODUCAO_GERENCIAR — nunca aberta ao Atendente.
+  arquivos: {
+    gerenciar: PERMISSOES.ARQUIVOS_GERENCIAR,
+    visualizar: PERMISSOES.ARQUIVOS_CONSULTAR,
+    permitirSe: ({ papel, metodo }) => {
+      if (papel !== "atendente") return false;
+      const METODOS_DO_ATENDENTE = new Set(["receber", "criarNovaVersao", "enviarParaAprovacaoCliente"]);
+      return METODOS_DO_ATENDENTE.has(metodo);
+    },
+  },
 };
 
 /**
@@ -146,6 +163,8 @@ const METODOS_LEITURA = new Set([
   "obterAberto",
   "obterResumo",
   "avaliarCompatibilidade",
+  "listarVersoes",
+  "buscarPorTokenAprovacaoPublica",
 ]);
 
 function protegerRepositorio<T extends object>(

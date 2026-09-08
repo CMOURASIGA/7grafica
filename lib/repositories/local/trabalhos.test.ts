@@ -6,9 +6,9 @@ const EMPRESA_ID = "empresa-trabalhos-teste";
 
 async function prepararWorkflow(repos: ReturnType<typeof criarRepositoriesLocal>) {
   const workflow = await repos.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow 3 etapas", categoriaServicoId: null, ativo: true });
-  const etapa1 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Recebimento", tipo: "humana" });
-  const etapa2 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Producao", tipo: "automatica" });
-  const etapa3 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 3, nome: "Conferencia", tipo: "humana" });
+  const etapa1 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Recebimento", tipo: "humana", exigeArquivoLiberado: false });
+  const etapa2 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Producao", tipo: "automatica", exigeArquivoLiberado: false });
+  const etapa3 = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 3, nome: "Conferencia", tipo: "humana", exigeArquivoLiberado: false });
   return { workflow, etapa1, etapa2, etapa3 };
 }
 
@@ -88,7 +88,7 @@ describe("TrabalhoRepository (SPEC 05)", () => {
     });
 
     // Cadastro do Workflow muda depois (nova etapa) — o Trabalho ja criado nao deve ser afetado.
-    await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 4, nome: "Etapa nova", tipo: "humana" });
+    await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 4, nome: "Etapa nova", tipo: "humana", exigeArquivoLiberado: false });
     await repos.etapasWorkflow.atualizar(trabalho.workflow.etapas[0].id, { nome: "Nome editado depois" });
 
     const releitura = await repos.trabalhos.obter(trabalho.id);

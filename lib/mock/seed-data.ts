@@ -1,4 +1,5 @@
 import type {
+  Arquivo,
   CapacidadeEquipamento,
   CategoriaServico,
   Cliente,
@@ -114,11 +115,31 @@ export const categoriasServicoSeed: CategoriaServico[] = [
 ];
 
 export const servicosSeed: Servico[] = [
-  { id: "servico-1", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-1", nome: "Cartao de visita 300g (100 unid.)", descricao: "Impressao digital colorida frente e verso.", precoBase: 90, ativo: true },
-  { id: "servico-2", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-2", nome: "Banner lona 440g (m2)", descricao: "Impressao em lona com ilhoses.", precoBase: 35, ativo: true },
-  { id: "servico-3", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-3", nome: "Encadernacao espiral", descricao: "Espiral plastico ate 200 folhas.", precoBase: 12, ativo: true },
-  { id: "servico-4", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-1", nome: "Impressao A4 colorida (unid.)", descricao: null, precoBase: 1.5, ativo: true },
-  { id: "servico-5", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-2", nome: "Adesivo vinil recortado (m2)", descricao: null, precoBase: 60, ativo: true },
+  // Requisito exatamente como o exemplo oficial da SPEC 07: Cartao (PDF, 2
+  // paginas, 90x50mm) e Banner (PDF, 100x200cm = 1000x2000mm).
+  {
+    id: "servico-1",
+    empresaId: EMPRESA_DEMO_ID,
+    categoriaId: "categoria-1",
+    nome: "Cartao de visita 300g (100 unid.)",
+    descricao: "Impressao digital colorida frente e verso.",
+    precoBase: 90,
+    ativo: true,
+    requisitoArquivo: { formatoEsperado: "pdf", paginasEsperadas: 2, larguraEsperadaMm: 90, alturaEsperadaMm: 50 },
+  },
+  {
+    id: "servico-2",
+    empresaId: EMPRESA_DEMO_ID,
+    categoriaId: "categoria-2",
+    nome: "Banner lona 440g (m2)",
+    descricao: "Impressao em lona com ilhoses.",
+    precoBase: 35,
+    ativo: true,
+    requisitoArquivo: { formatoEsperado: "pdf", paginasEsperadas: null, larguraEsperadaMm: 1000, alturaEsperadaMm: 2000 },
+  },
+  { id: "servico-3", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-3", nome: "Encadernacao espiral", descricao: "Espiral plastico ate 200 folhas.", precoBase: 12, ativo: true, requisitoArquivo: null },
+  { id: "servico-4", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-1", nome: "Impressao A4 colorida (unid.)", descricao: null, precoBase: 1.5, ativo: true, requisitoArquivo: null },
+  { id: "servico-5", empresaId: EMPRESA_DEMO_ID, categoriaId: "categoria-2", nome: "Adesivo vinil recortado (m2)", descricao: null, precoBase: 60, ativo: true, requisitoArquivo: null },
 ];
 
 export const unidadesMedidaSeed: UnidadeMedida[] = [
@@ -181,14 +202,16 @@ export const workflowsSeed: Workflow[] = [
 ];
 
 export const etapasWorkflowSeed: EtapaWorkflow[] = [
-  { id: "etapa-1-1", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 1, nome: "Recebimento do arquivo", tipo: "humana" },
-  { id: "etapa-1-2", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 2, nome: "Analise tecnica", tipo: "humana" },
-  { id: "etapa-1-3", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 3, nome: "Impressao", tipo: "automatica" },
-  { id: "etapa-1-4", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 4, nome: "Acabamento", tipo: "humana" },
-  { id: "etapa-1-5", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 5, nome: "Conferencia final", tipo: "humana" },
-  { id: "etapa-2-1", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 1, nome: "Aprovacao de arte", tipo: "humana" },
-  { id: "etapa-2-2", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 2, nome: "Impressao plotter", tipo: "automatica" },
-  { id: "etapa-2-3", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 3, nome: "Acabamento e instalacao", tipo: "hibrida" },
+  { id: "etapa-1-1", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 1, nome: "Recebimento do arquivo", tipo: "humana", exigeArquivoLiberado: false },
+  { id: "etapa-1-2", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 2, nome: "Analise tecnica", tipo: "humana", exigeArquivoLiberado: false },
+  { id: "etapa-1-3", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 3, nome: "Impressao", tipo: "automatica", exigeArquivoLiberado: false },
+  // SPEC 07: so entra em Acabamento se ja houver um arquivo explicitamente
+  // liberado para producao — impede produzir com versao antiga/nao aprovada.
+  { id: "etapa-1-4", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 4, nome: "Acabamento", tipo: "humana", exigeArquivoLiberado: true },
+  { id: "etapa-1-5", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-1", ordem: 5, nome: "Conferencia final", tipo: "humana", exigeArquivoLiberado: false },
+  { id: "etapa-2-1", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 1, nome: "Aprovacao de arte", tipo: "humana", exigeArquivoLiberado: false },
+  { id: "etapa-2-2", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 2, nome: "Impressao plotter", tipo: "automatica", exigeArquivoLiberado: false },
+  { id: "etapa-2-3", empresaId: EMPRESA_DEMO_ID, workflowId: "workflow-2", ordem: 3, nome: "Acabamento e instalacao", tipo: "hibrida", exigeArquivoLiberado: true },
 ];
 
 // --- SPEC 03: Entrada por E-mail e Orcamentos ------------------------------
@@ -358,7 +381,7 @@ export const trabalhosSeed: Trabalho[] = [
       etapas: etapasWorkflowSeed
         .filter((etapa) => etapa.workflowId === "workflow-1")
         .sort((a, b) => a.ordem - b.ordem)
-        .map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo })),
+        .map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo, exigeArquivoLiberado: etapa.exigeArquivoLiberado })),
     },
     etapaAtualId: "etapa-1-3",
     // SPEC 06: a etapa atual (etapa-1-3, "Impressao", tipo "automatica") exige
@@ -367,7 +390,57 @@ export const trabalhosSeed: Trabalho[] = [
     // incompativeis por motivos diferentes).
     formato: "A3",
     tipoEquipamentoNecessario: "impressora",
+    // SPEC 07: deliberadamente sem arquivo liberado ainda — demonstra o
+    // bloqueio ao tentar avancar para "Acabamento" (exigeArquivoLiberado)
+    // antes de uma decisao explicita de liberacao.
+    arquivoLiberadoId: null,
     criadoEm: "2026-02-20T09:00:00.000Z",
     concluidoEm: null,
+  },
+];
+
+// --- SPEC 07: Arquivos e Arte -----------------------------------------------
+//
+// Continua o MESMO Trabalho (trabalho-1/TRAB-0001) — o cliente ja enviou a
+// arte pronta do cartao (servico-1), batendo exatamente com o
+// requisitoArquivo cadastrado (PDF, 2 paginas, 90x50mm): preflight "ok",
+// mas ainda SEM aprovacao tecnica nem liberacao para producao — ponto de
+// partida real para validar o cenario A (aprovar -> liberar -> avancar).
+
+export const arquivosSeed: Arquivo[] = [
+  {
+    id: "arquivo-1",
+    empresaId: EMPRESA_DEMO_ID,
+    solicitacaoId: "solic-1",
+    pedidoId: "pedido-1",
+    trabalhoId: "trabalho-1",
+    tipo: "cliente",
+    nome: "cartao_sabor_cia_v1.pdf",
+    extensao: "pdf",
+    mimeType: "application/pdf",
+    tamanhoBytes: 842_000,
+    origem: "email",
+    grupoArquivoId: "grupo-arquivo-1",
+    versao: 1,
+    versaoAnteriorId: null,
+    enviadoPorUsuarioId: null,
+    enviadoEm: "2026-02-18T10:05:00.000Z",
+    situacao: "recebido",
+    analise: {
+      status: "ok",
+      paginas: 2,
+      larguraMm: 90,
+      alturaMm: 50,
+      orientacao: "paisagem",
+      tamanhoBytes: 842_000,
+      mimeType: "application/pdf",
+      regras: [],
+      analisadoEm: "2026-02-18T10:05:05.000Z",
+    },
+    statusAprovacaoTecnica: "pendente",
+    aprovacaoTecnica: null,
+    aprovacaoCliente: null,
+    tokenAprovacaoPublica: null,
+    criadoEm: "2026-02-18T10:05:00.000Z",
   },
 ];

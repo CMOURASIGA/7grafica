@@ -216,8 +216,8 @@ describe("RBAC de Producao/Kanban (SPEC 05) — repositorio", () => {
   async function prepararTrabalho(papelCriador: "admin" | "gerente", responsavelUsuarioId: string | null) {
     const base = criarRepositoriesLocal();
     const workflow = await base.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow teste", categoriaServicoId: null, ativo: true });
-    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Etapa 1", tipo: "humana" });
-    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Etapa 2", tipo: "humana" });
+    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Etapa 1", tipo: "humana", exigeArquivoLiberado: false });
+    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Etapa 2", tipo: "humana", exigeArquivoLiberado: false });
     const repos = protegerRepositories(base, papelCriador, "usuario-criador");
     const trabalho = await repos.trabalhos.criar({
       empresaId: EMPRESA_ID,
@@ -327,7 +327,7 @@ describe("RBAC de Producao e Equipamentos (SPEC 06) — repositorio", () => {
       observacoes: null,
     });
     const workflow = await base.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow com equipamento", categoriaServicoId: null, ativo: true });
-    const etapa = await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Impressao", tipo: "automatica" });
+    const etapa = await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Impressao", tipo: "automatica", exigeArquivoLiberado: false });
     const trabalho = await base.trabalhos.criar({
       empresaId: EMPRESA_ID,
       pedidoId: "pedido-qualquer",
@@ -409,5 +409,134 @@ describe("RBAC de Producao e Equipamentos (SPEC 06) — repositorio", () => {
     // Trabalho quebra para quem so tem PRODUCAO_CONSULTAR (atendente/operador).
     await expect(repos.alocacoesEquipamento.listarPorTrabalho(trabalho.id)).resolves.toHaveLength(1);
     await expect(repos.alocacoesEquipamento.avaliarCompatibilidade(trabalho.id)).resolves.toBeInstanceOf(Array);
+  });
+});
+
+describe("RBAC de Arquivos e Arte (SPEC 07) — repositorio", () => {
+  beforeEach(() => {
+    limparNamespace();
+  });
+
+  async function prepararArquivo() {
+    const base = criarRepositoriesLocal();
+    const workflow = await base.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow arquivos", categoriaServicoId: null, ativo: true });
+    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Etapa 1", tipo: "humana", exigeArquivoLiberado: false });
+    const trabalho = await base.trabalhos.criar({
+      empresaId: EMPRESA_ID,
+      pedidoId: "pedido-x",
+      clienteId: null,
+      descricao: "Teste",
+      quantidade: 1,
+      servicoId: null,
+      materialId: null,
+      acabamentos: null,
+      prazo: null,
+      prioridade: "normal",
+      responsavelUsuarioId: "usuario-operador-dono",
+      observacoes: null,
+      origem: "balcao",
+      workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
+    });
+    const arquivo = await base.arquivos.receber(
+      {
+        empresaId: EMPRESA_ID,
+        solicitacaoId: null,
+        pedidoId: "pedido-x",
+        trabalhoId: trabalho.id,
+        tipo: "cliente",
+        origem: "email",
+        enviadoPorUsuarioId: null,
+        nome: "arte.pdf",
+        extensao: "pdf",
+        mimeType: "application/pdf",
+        tamanhoBytes: 100_000,
+        paginas: 1,
+        larguraMm: null,
+        alturaMm: null,
+      },
+      null,
+    );
+    return { base, trabalho, arquivo };
+  }
+
+  it("Admin/Gerente: gerenciamento completo — aprova tecnicamente, envia para aprovacao do cliente e libera para producao", async () => {
+    const { base, trabalho, arquivo } = await prepararArquivo();
+    const repos = protegerRepositories(base, "gerente", "usuario-gerente");
+    await expect(repos.arquivos.aprovarTecnicamente(arquivo.id, "usuario-gerente", null)).resolves.toMatchObject({ statusAprovacaoTecnica: "aprovado" });
+    await expect(repos.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "usuario-gerente")).resolves.toMatchObject({
+      arquivoLiberadoId: arquivo.id,
+    });
+  });
+
+  it("Atendente: pode receber/anexar arquivo e enviar para aprovacao do cliente, mas NUNCA aprova tecnicamente nem libera para producao", async () => {
+    const { base, trabalho, arquivo } = await prepararArquivo();
+    const repos = protegerRepositories(base, "atendente", "usuario-atendente");
+
+    // Permitido: "anexar/receber arquivos e acompanhar aprovacao".
+    await expect(
+      repos.arquivos.receber(
+        {
+          empresaId: EMPRESA_ID,
+          solicitacaoId: null,
+          pedidoId: "pedido-x",
+          trabalhoId: trabalho.id,
+          tipo: "cliente",
+          origem: "upload_interno",
+          enviadoPorUsuarioId: "usuario-atendente",
+          nome: "outro.pdf",
+          extensao: "pdf",
+          mimeType: "application/pdf",
+          tamanhoBytes: 1000,
+          paginas: 1,
+          larguraMm: null,
+          alturaMm: null,
+        },
+        "usuario-atendente",
+      ),
+    ).resolves.toBeTruthy();
+    await expect(repos.arquivos.enviarParaAprovacaoCliente(arquivo.id, "usuario-atendente")).resolves.toMatchObject({
+      situacao: "aguardando_aprovacao_cliente",
+    });
+
+    // Negado: aprovacao tecnica e liberacao para producao sao "gerenciamento completo".
+    await expect(repos.arquivos.aprovarTecnicamente(arquivo.id, "usuario-atendente", null)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "usuario-atendente")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
+  });
+
+  it("Operador: consulta arquivos liberados para os Trabalhos que executa, mas nunca escreve", async () => {
+    const { base, trabalho, arquivo } = await prepararArquivo();
+    const repos = protegerRepositories(base, "operador", "usuario-operador-dono");
+
+    await expect(repos.arquivos.listarPorTrabalho(trabalho.id)).resolves.toHaveLength(1);
+    await expect(repos.arquivos.aprovarTecnicamente(arquivo.id, "usuario-operador-dono", null)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(
+      repos.arquivos.receber(
+        {
+          empresaId: EMPRESA_ID,
+          solicitacaoId: null,
+          pedidoId: "pedido-x",
+          trabalhoId: trabalho.id,
+          tipo: "cliente",
+          origem: "upload_interno",
+          enviadoPorUsuarioId: "usuario-operador-dono",
+          nome: "outro.pdf",
+          extensao: "pdf",
+          mimeType: "application/pdf",
+          tamanhoBytes: 1000,
+          paginas: 1,
+          larguraMm: null,
+          alturaMm: null,
+        },
+        "usuario-operador-dono",
+      ),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+    // Mesmo sendo o responsavel pelo Trabalho, Operador nunca libera para producao.
+    await expect(repos.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "usuario-operador-dono")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
   });
 });

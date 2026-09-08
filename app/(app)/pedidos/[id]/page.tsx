@@ -6,7 +6,7 @@ import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/u
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
-import type { Cliente, EventoAuditoria, FormaPagamento, Material, Pedido, PrioridadeTrabalho, Recebimento, Trabalho, TipoEquipamento, Workflow } from "@/lib/domain/entities";
+import type { Cliente, EventoAuditoria, FormaPagamento, Material, Pedido, PrioridadeTrabalho, Recebimento, Servico, Trabalho, TipoEquipamento, Workflow } from "@/lib/domain/entities";
 
 const TIPOS_EQUIPAMENTO: { value: TipoEquipamento; label: string }[] = [
   { value: "impressora", label: "Impressora" },
@@ -52,6 +52,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const [formaPagamentoId, setFormaPagamentoId] = useState("");
@@ -64,6 +65,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const [novoTrabalhoPrazo, setNovoTrabalhoPrazo] = useState("");
   const [novoTrabalhoPrioridade, setNovoTrabalhoPrioridade] = useState<PrioridadeTrabalho>("normal");
   const [novoTrabalhoMaterialId, setNovoTrabalhoMaterialId] = useState("");
+  const [novoTrabalhoServicoId, setNovoTrabalhoServicoId] = useState("");
   const [novoTrabalhoFormato, setNovoTrabalhoFormato] = useState("");
   const [novoTrabalhoTipoEquipamento, setNovoTrabalhoTipoEquipamento] = useState("");
 
@@ -75,7 +77,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
     const atual = await repositories.pedidos.obter(id);
     setPedido(atual);
     if (atual) {
-      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto, listaTrabalhos, listaWorkflows, listaMateriais] = await Promise.all([
+      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto, listaTrabalhos, listaWorkflows, listaMateriais, listaServicos] = await Promise.all([
         atual.clienteId ? repositories.clientes.obter(atual.clienteId) : Promise.resolve(null),
         repositories.recebimentos.listarPorPedido(atual.id),
         repositories.formasPagamento.listar(atual.empresaId),
@@ -84,6 +86,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         podeVerProducao ? repositories.trabalhos.listarPorPedido(atual.id) : Promise.resolve([]),
         podeGerarTrabalho ? repositories.workflows.listar(atual.empresaId) : Promise.resolve([]),
         podeGerarTrabalho ? repositories.materiais.listar(atual.empresaId) : Promise.resolve([]),
+        podeGerarTrabalho ? repositories.servicos.listar(atual.empresaId) : Promise.resolve([]),
       ]);
       setCliente(clienteAtual);
       setRecebimentos(listaRecebimentos);
@@ -93,6 +96,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
       setTrabalhos(listaTrabalhos);
       setWorkflows(listaWorkflows.filter((workflow) => workflow.ativo));
       setMateriais(listaMateriais.filter((material) => material.ativo));
+      setServicos(listaServicos.filter((servico) => servico.ativo));
       if (!novoTrabalhoDescricao && atual.itens[0]) {
         setNovoTrabalhoDescricao(atual.itens[0].descricao);
         setNovoTrabalhoQuantidade(String(atual.itens[0].quantidade));
@@ -222,7 +226,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         clienteId: pedido!.clienteId,
         descricao: novoTrabalhoDescricao.trim(),
         quantidade,
-        servicoId: null,
+        servicoId: novoTrabalhoServicoId || null,
         materialId: novoTrabalhoMaterialId || null,
         acabamentos: null,
         prazo: novoTrabalhoPrazo ? new Date(novoTrabalhoPrazo).toISOString() : null,
@@ -237,6 +241,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
       showToast(`Trabalho ${trabalho.codigo} gerado.`, "success");
       setNovoTrabalhoWorkflowId("");
       setNovoTrabalhoMaterialId("");
+      setNovoTrabalhoServicoId("");
       setNovoTrabalhoFormato("");
       setNovoTrabalhoTipoEquipamento("");
       setNovoTrabalhoPrazo("");
@@ -475,6 +480,24 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
                   value={novoTrabalhoPrazo}
                   onChange={(event) => setNovoTrabalhoPrazo(event.target.value)}
                 />
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-servico" className="workspace-label">
+                  Serviço (opcional — define requisito de arquivo)
+                </label>
+                <select
+                  id="pedido-novo-trabalho-servico"
+                  className="workspace-select"
+                  value={novoTrabalhoServicoId}
+                  onChange={(event) => setNovoTrabalhoServicoId(event.target.value)}
+                >
+                  <option value="">Nenhum</option>
+                  {servicos.map((servico) => (
+                    <option key={servico.id} value={servico.id}>
+                      {servico.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="pedido-novo-trabalho-material" className="workspace-label">

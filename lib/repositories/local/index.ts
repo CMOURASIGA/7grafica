@@ -22,6 +22,7 @@ import { criarRecebimentoRepositoryLocal } from "@/lib/repositories/local/recebi
 import { criarTrabalhoRepositoryLocal } from "@/lib/repositories/local/trabalhos";
 import { criarEquipamentoRepositoryLocal } from "@/lib/repositories/local/equipamentos";
 import { criarAlocacaoEquipamentoRepositoryLocal } from "@/lib/repositories/local/alocacoes-equipamento";
+import { criarArquivoRepositoryLocal } from "@/lib/repositories/local/arquivos";
 
 /**
  * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
@@ -65,5 +66,7 @@ export function criarRepositoriesLocal(): Repositories {
     trabalhos: criarTrabalhoRepositoryLocal(),
 
     alocacoesEquipamento: criarAlocacaoEquipamentoRepositoryLocal(),
+
+    arquivos: criarArquivoRepositoryLocal(),
   };
 }

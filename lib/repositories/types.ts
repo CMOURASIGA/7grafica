@@ -9,6 +9,7 @@
 
 import type {
   AlocacaoEquipamento,
+  Arquivo,
   AvaliacaoCompatibilidadeEquipamento,
   Caixa,
   CapacidadeEquipamento,
@@ -32,6 +33,7 @@ import type {
   MovimentoCaixaManual,
   Orcamento,
   OrcamentoItem,
+  OrigemArquivo,
   OrigemPedido,
   Papel,
   Pedido,
@@ -42,6 +44,7 @@ import type {
   Solicitacao,
   StatusEntregaPedido,
   Trabalho,
+  TipoArquivo,
   TipoEquipamento,
   UnidadeMedida,
   UsuarioPerfil,
@@ -267,6 +270,8 @@ export type Repositories = {
   trabalhos: TrabalhoRepository;
 
   alocacoesEquipamento: AlocacaoEquipamentoRepository;
+
+  arquivos: ArquivoRepository;
 };
 
 // --- SPEC 05: Pedidos, Trabalhos e Kanban -----------------------------------
@@ -313,6 +318,13 @@ export type TrabalhoRepository = {
   /** Volta a "em_producao" a partir de pausado ou com_pendencia. */
   retomar(trabalhoId: string, usuarioId: string): Promise<Trabalho>;
   cancelar(trabalhoId: string, usuarioId: string, motivo: string): Promise<Trabalho>;
+  /**
+   * SPEC 07: fixa a referencia EXPLICITA de qual Arquivo (versao especifica)
+   * esta liberado para producao — nunca implicito/"ultimo enviado". Exige
+   * aprovacao tecnica sempre, e aprovacao do cliente quando o arquivo for
+   * do tipo "arte".
+   */
+  liberarArquivoParaProducao(trabalhoId: string, arquivoId: string, usuarioId: string): Promise<Trabalho>;
 };
 
 // --- SPEC 06: Producao e Equipamentos ---------------------------------------
@@ -354,4 +366,58 @@ export type AlocacaoEquipamentoRepository = {
    * via alocacaoAnteriorId. Nunca move nem apaga a alocacao original.
    */
   realocar(alocacaoId: string, usuarioId: string, novoEquipamentoId: string, motivo: string): Promise<AlocacaoEquipamento>;
+};
+
+// --- SPEC 07: Arquivos e Arte -----------------------------------------------
+
+export type DadosMetadadosArquivo = {
+  nome: string;
+  extensao: string;
+  mimeType: string;
+  tamanhoBytes: number;
+  /** Metadados tecnicos simulados do arquivo mockado (o MVP nao guarda binario) — usados pelo preflight. */
+  paginas: number | null;
+  larguraMm: number | null;
+  alturaMm: number | null;
+};
+
+export type DadosReceberArquivo = DadosMetadadosArquivo & {
+  empresaId: string;
+  solicitacaoId: string | null;
+  pedidoId: string | null;
+  trabalhoId: string | null;
+  tipo: TipoArquivo;
+  origem: OrigemArquivo;
+  /** Null quando origem = "portal_cliente" (cliente nao e um usuario interno). */
+  enviadoPorUsuarioId: string | null;
+};
+
+export type ArquivoRepository = {
+  listar(empresaId: string): Promise<Arquivo[]>;
+  obter(id: string): Promise<Arquivo | null>;
+  listarPorTrabalho(trabalhoId: string): Promise<Arquivo[]>;
+  listarPorPedido(pedidoId: string): Promise<Arquivo[]>;
+  listarPorSolicitacao(solicitacaoId: string): Promise<Arquivo[]>;
+  /** Historico completo de versoes do mesmo arquivo logico, mais antiga primeiro. */
+  listarVersoes(grupoArquivoId: string): Promise<Arquivo[]>;
+  buscarPorTokenAprovacaoPublica(token: string): Promise<Arquivo | null>;
+  /** Cria a versao 1 de um novo arquivo logico e roda o preflight automaticamente. */
+  receber(dados: DadosReceberArquivo, usuarioId: string | null): Promise<Arquivo>;
+  /**
+   * Cria uma NOVA versao dentro do mesmo grupo (nunca sobrescreve): marca a
+   * versao anterior como "substituido" e roda o preflight na nova.
+   */
+  criarNovaVersao(grupoArquivoId: string, dados: DadosMetadadosArquivo, usuarioId: string | null): Promise<Arquivo>;
+  /** Re-roda o preflight (ex.: apos editar requisitos do Servico) — idempotente. */
+  reanalisar(arquivoId: string): Promise<Arquivo>;
+  aprovarTecnicamente(arquivoId: string, usuarioId: string, comentario: string | null): Promise<Arquivo>;
+  rejeitarTecnicamente(arquivoId: string, usuarioId: string, comentario: string | null): Promise<Arquivo>;
+  /** Gera (ou reaproveita) o token publico e muda a situacao para aguardando o cliente. */
+  enviarParaAprovacaoCliente(arquivoId: string, usuarioId: string): Promise<Arquivo>;
+  /** Usado pela pagina publica (sem RBAC) — decisao do cliente via token. */
+  registrarDecisaoPublicaCliente(
+    token: string,
+    decisao: "aprovado" | "alteracao_solicitada" | "rejeitado",
+    comentario: string | null,
+  ): Promise<Arquivo>;
 };

@@ -115,6 +115,13 @@ export type Servico = {
   descricao: string | null;
   precoBase: number;
   ativo: boolean;
+  /**
+   * SPEC 07: requisitos de arquivo deste servico (ex.: Banner exige PDF
+   * 100x200cm). Null = sem requisito cadastrado — o preflight so relata os
+   * metadados encontrados, sem divergencia. Comparacao e sempre
+   * deterministica (nunca IA).
+   */
+  requisitoArquivo: RequisitoArquivoServico | null;
 };
 
 export type UnidadeMedida = {
@@ -198,6 +205,13 @@ export type EtapaWorkflow = {
   ordem: number;
   nome: string;
   tipo: TipoEtapa;
+  /**
+   * SPEC 07: quando true, um Trabalho so pode ENTRAR nesta etapa se ja
+   * tiver um arquivo explicitamente liberado para producao
+   * (Trabalho.arquivoLiberadoId) — nunca "o ultimo arquivo enviado".
+   * Default false (mantem o comportamento das SPECs 05/06 intacto).
+   */
+  exigeArquivoLiberado: boolean;
 };
 
 // --- SPEC 03: Entrada por E-mail e Orcamentos ------------------------------
@@ -412,6 +426,8 @@ export type EtapaSnapshot = {
   ordem: number;
   nome: string;
   tipo: TipoEtapa;
+  /** SPEC 07: copiado do cadastro no momento do snapshot — ver EtapaWorkflow.exigeArquivoLiberado. */
+  exigeArquivoLiberado: boolean;
 };
 
 export type WorkflowSnapshot = {
@@ -457,6 +473,12 @@ export type Trabalho = {
    * workflow usa equipamento (workflow so humano).
    */
   tipoEquipamentoNecessario: TipoEquipamento | null;
+  /**
+   * SPEC 07: referencia EXPLICITA ao Arquivo (versao especifica) liberado
+   * para producao — nunca implicito/"ultimo enviado". So setado pela acao
+   * dedicada de liberacao (ver ArquivoRepository/TrabalhoRepository).
+   */
+  arquivoLiberadoId: string | null;
   criadoEm: string;
   concluidoEm: string | null;
 };
@@ -525,4 +547,113 @@ export type AvaliacaoCompatibilidadeEquipamento = {
   equipamentoId: string;
   compativel: boolean;
   motivos: MotivoCompatibilidadeEquipamento[];
+};
+
+// --- SPEC 07: Arquivos e Arte -----------------------------------------------
+//
+// Arquivo e uma entidade de primeira classe (nunca uma string anexada ao
+// Pedido): pode se relacionar a Solicitacao, Pedido, Trabalho e/ou Arte, e
+// um mesmo Pedido/Trabalho pode ter varios. LocalStorage nao guarda binario
+// — so metadados (nome/extensao/tamanho/mimeType) + o conteudo simulado;
+// a troca futura por Supabase Storage e so trocar o adapter, o dominio
+// abaixo nao muda. Nunca sobrescreve: uma nova versao SEMPRE cria um novo
+// registro ligado ao anterior via versaoAnteriorId, preservando o grupo
+// (grupoArquivoId) e o historico completo de quem/quando/o que mudou.
+
+export type TipoArquivo = "cliente" | "arte" | "producao";
+
+/** De onde o arquivo chegou — nunca decide regra de negocio, e so metadado de procedencia (como OrigemPedido). */
+export type OrigemArquivo = "email" | "portal_cliente" | "upload_interno";
+
+export type StatusAnalisePreflight = "ok" | "alerta" | "bloqueio";
+
+export type RegraPreflight = {
+  codigo: string;
+  mensagem: string;
+  severidade: "alerta" | "bloqueio";
+};
+
+/**
+ * Preflight basico do MVP: extrai metadados tecnicos e compara de forma
+ * determinística (nunca IA) contra o RequisitoArquivoServico do Trabalho,
+ * quando houver. Nao faz conversao de cor, PDF/X, TAC nem flatten — isso
+ * fica para evolucao futura do preflight.
+ */
+export type AnalisePreflight = {
+  status: StatusAnalisePreflight;
+  paginas: number | null;
+  larguraMm: number | null;
+  alturaMm: number | null;
+  orientacao: "retrato" | "paisagem" | null;
+  tamanhoBytes: number;
+  mimeType: string;
+  regras: RegraPreflight[];
+  analisadoEm: string;
+};
+
+/** Requisitos de arquivo de um Servico (SPEC 07) — comparados ao AnalisePreflight de forma determinística. */
+export type RequisitoArquivoServico = {
+  formatoEsperado: string | null; // ex.: "PDF"
+  paginasEsperadas: number | null;
+  larguraEsperadaMm: number | null;
+  alturaEsperadaMm: number | null;
+};
+
+/**
+ * Aprovacao TECNICA (arquivo atende aos requisitos para producao) e
+ * aprovacao do CLIENTE (cliente concordou com a arte/conteudo visual) sao
+ * decisoes DIFERENTES e rastreadas separadamente — nunca confundidas. Um
+ * arquivo pode estar tecnicamente aprovado e ainda aguardando o cliente.
+ */
+export type StatusAprovacaoTecnica = "pendente" | "aprovado" | "rejeitado";
+
+/**
+ * Situacao geral do Arquivo. "em_criacao" e exclusivo do fluxo de CRIACAO
+ * DE ARTE (arte que nasce em branco, nao enviada pelo cliente). Os demais
+ * estados cobrem tanto arte pronta quanto arquivos de producao/cliente.
+ * "substituido" e terminal: marcado quando uma nova versao a sucede —
+ * nunca removido do historico.
+ */
+export type SituacaoArquivo =
+  | "recebido"
+  | "em_criacao"
+  | "aguardando_aprovacao_cliente"
+  | "alteracao_solicitada"
+  | "aprovado_cliente"
+  | "rejeitado_cliente"
+  | "substituido"
+  | "cancelado";
+
+export type Arquivo = {
+  id: string;
+  empresaId: string;
+  /** Vinculos possiveis — nem todos preenchidos ao mesmo tempo; um Arquivo de Trabalho quase sempre tem tambem pedidoId. */
+  solicitacaoId: string | null;
+  pedidoId: string | null;
+  trabalhoId: string | null;
+  tipo: TipoArquivo;
+  nome: string;
+  extensao: string;
+  mimeType: string;
+  tamanhoBytes: number;
+  origem: OrigemArquivo;
+  /** Estavel entre versoes do MESMO arquivo logico — nunca muda numa nova versao. */
+  grupoArquivoId: string;
+  /** Sequencial dentro do grupo, comecando em 1. */
+  versao: number;
+  /** Aponta para a versao anterior deste grupo, se houver. */
+  versaoAnteriorId: string | null;
+  /** Null quando enviado pelo proprio cliente via portal publico (sem usuario interno). */
+  enviadoPorUsuarioId: string | null;
+  enviadoEm: string;
+  situacao: SituacaoArquivo;
+  /** Null ate a primeira analise rodar (roda automaticamente ao receber). */
+  analise: AnalisePreflight | null;
+  statusAprovacaoTecnica: StatusAprovacaoTecnica;
+  aprovacaoTecnica: { usuarioId: string; data: string; comentario: string | null } | null;
+  /** Preenchido pela decisao publica do cliente (portal), nunca por um usuario interno agindo "em nome" do cliente. */
+  aprovacaoCliente: { data: string; comentario: string | null; aprovado: boolean } | null;
+  /** Token nao sequencial para a pagina publica de aprovacao de arte — mesma limitacao de MVP dos demais tokens (ver docs/MVP-LOCALSTORAGE.md). */
+  tokenAprovacaoPublica: string | null;
+  criadoEm: string;
 };

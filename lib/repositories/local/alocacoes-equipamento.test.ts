@@ -61,8 +61,8 @@ async function prepararCenario(repos: ReturnType<typeof criarRepositoriesLocal>)
   });
 
   const workflow = await repos.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow impressao", categoriaServicoId: null, ativo: true });
-  const etapaHumana = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Recebimento", tipo: "humana" });
-  const etapaEquipamento = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Impressao", tipo: "automatica" });
+  const etapaHumana = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Recebimento", tipo: "humana", exigeArquivoLiberado: false });
+  const etapaEquipamento = await repos.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Impressao", tipo: "automatica", exigeArquivoLiberado: false });
   void etapaHumana;
 
   const trabalho = await repos.trabalhos.criar({

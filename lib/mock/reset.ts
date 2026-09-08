@@ -2,6 +2,7 @@ import { gravarColecao, gravarValor, lerValor, limparNamespace } from "@/lib/sto
 import { CHAVES_USUARIOS } from "@/lib/repositories/local/usuarios";
 import { CHAVES_SESSAO } from "@/lib/repositories/local/sessao";
 import {
+  arquivosSeed,
   capacidadesEquipamentoSeed,
   categoriasServicoSeed,
   clientesSeed,
@@ -65,13 +66,14 @@ export function restaurarDadosDemo(): void {
   gravarColecao("pedidos", pedidosSeed);
 
   gravarColecao("trabalhos", trabalhosSeed);
+
+  gravarColecao("arquivos", arquivosSeed);
 }
 
-// v5: SPEC 06 acrescentou Equipamento.situacao/capacidadeSimultanea,
-// CapacidadeEquipamento.materiaisCompativeisIds e Trabalho.formato/
-// tipoEquipamentoNecessario — sem o reseed, sessoes antigas leriam esses
-// campos como undefined.
-const CHAVE_BOOTSTRAP = "bootstrap_v5";
+// v6: SPEC 07 acrescentou Servico.requisitoArquivo, EtapaWorkflow/EtapaSnapshot
+// .exigeArquivoLiberado, Trabalho.arquivoLiberadoId e a colecao "arquivos" —
+// sem o reseed, sessoes antigas leriam esses campos como undefined.
+const CHAVE_BOOTSTRAP = "bootstrap_v6";
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {

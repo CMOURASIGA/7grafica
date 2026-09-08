@@ -1,11 +1,12 @@
 import { gerarId, gravarColecao, lerColecao } from "@/lib/storage/local-storage-client";
-import type { EtapaWorkflow, EventoAuditoria, Trabalho, Workflow } from "@/lib/domain/entities";
+import type { Arquivo, EtapaWorkflow, EventoAuditoria, Trabalho, Workflow } from "@/lib/domain/entities";
 import type { TrabalhoRepository } from "@/lib/repositories/types";
 
 const CHAVE = "trabalhos";
 const CHAVE_WORKFLOWS = "workflows";
 const CHAVE_ETAPAS = "etapas_workflow";
 const CHAVE_AUDITORIA = "eventos_auditoria";
+const CHAVE_ARQUIVOS = "arquivos";
 
 function proximoCodigo(empresaId: string): string {
   const existentes = lerColecao<Trabalho>(CHAVE).filter((trabalho) => trabalho.empresaId === empresaId);
@@ -87,11 +88,18 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
         workflow: {
           workflowId: workflow.id,
           nome: workflow.nome,
-          etapas: etapas.map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo })),
+          etapas: etapas.map((etapa) => ({
+            id: etapa.id,
+            ordem: etapa.ordem,
+            nome: etapa.nome,
+            tipo: etapa.tipo,
+            exigeArquivoLiberado: etapa.exigeArquivoLiberado,
+          })),
         },
         etapaAtualId: etapas[0].id,
         formato: dados.formato,
         tipoEquipamentoNecessario: dados.tipoEquipamentoNecessario,
+        arquivoLiberadoId: null,
         criadoEm: new Date().toISOString(),
         concluidoEm: null,
       };
@@ -147,6 +155,12 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
       }
       if (!avancando && (!motivo || motivo.trim().length === 0)) {
         throw new Error("Retroceder de etapa exige justificativa.");
+      }
+      const etapaDestino = etapas[indiceDestino];
+      if (avancando && etapaDestino.exigeArquivoLiberado && !trabalho.arquivoLiberadoId) {
+        throw new Error(
+          `Nao e possivel entrar na etapa "${etapaDestino.nome}": nenhum arquivo foi explicitamente liberado para producao neste Trabalho.`,
+        );
       }
 
       const etapaAnterior = etapas[indiceAtual];
@@ -251,6 +265,32 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
         entidadeId: atualizado.id,
         dadosAntes: { situacao: trabalho.situacao },
         dadosDepois: { situacao: "cancelado", motivo },
+      });
+      return atualizado;
+    },
+    async liberarArquivoParaProducao(trabalhoId, arquivoId, usuarioId) {
+      const trabalho = obterOuFalhar(trabalhoId);
+      const arquivo = lerColecao<Arquivo>(CHAVE_ARQUIVOS).find((item) => item.id === arquivoId);
+      if (!arquivo) throw new Error(`Arquivo ${arquivoId} nao encontrado.`);
+      if (arquivo.trabalhoId !== trabalhoId) {
+        throw new Error("Este arquivo nao pertence a este Trabalho.");
+      }
+      if (arquivo.statusAprovacaoTecnica !== "aprovado") {
+        throw new Error("So e possivel liberar para producao um arquivo com aprovacao tecnica.");
+      }
+      if (arquivo.tipo === "arte" && arquivo.situacao !== "aprovado_cliente") {
+        throw new Error("Arquivos de arte exigem tambem a aprovacao do cliente antes de serem liberados para producao.");
+      }
+      const anterior = trabalho.arquivoLiberadoId;
+      const atualizado = salvar({ ...trabalho, arquivoLiberadoId: arquivoId });
+      registrarEvento({
+        empresaId: atualizado.empresaId,
+        usuarioId,
+        acao: "trabalho_arquivo_liberado_producao",
+        entidade: "trabalho",
+        entidadeId: atualizado.id,
+        dadosAntes: { arquivoLiberadoId: anterior },
+        dadosDepois: { arquivoLiberadoId: arquivoId, versao: arquivo.versao },
       });
       return atualizado;
     },

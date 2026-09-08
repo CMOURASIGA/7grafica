@@ -6,8 +6,36 @@ import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/u
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
-import type { AlocacaoEquipamento, AvaliacaoCompatibilidadeEquipamento, Cliente, Equipamento, EventoAuditoria, Pedido, PrioridadeTrabalho, Trabalho } from "@/lib/domain/entities";
+import type {
+  AlocacaoEquipamento,
+  Arquivo,
+  AvaliacaoCompatibilidadeEquipamento,
+  Cliente,
+  Equipamento,
+  EventoAuditoria,
+  OrigemArquivo,
+  Pedido,
+  PrioridadeTrabalho,
+  Servico,
+  TipoArquivo,
+  Trabalho,
+} from "@/lib/domain/entities";
 import type { VinculoComPerfil } from "@/lib/repositories/types";
+
+const SITUACAO_ARQUIVO_LABEL: Record<Arquivo["situacao"], string> = {
+  recebido: "Recebido",
+  em_criacao: "Em criação",
+  aguardando_aprovacao_cliente: "Aguardando aprovação do cliente",
+  alteracao_solicitada: "Alteração solicitada",
+  aprovado_cliente: "Aprovado pelo cliente",
+  rejeitado_cliente: "Rejeitado pelo cliente",
+  substituido: "Substituído",
+  cancelado: "Cancelado",
+};
+
+const TIPO_ARQUIVO_LABEL: Record<TipoArquivo, string> = { cliente: "Arquivo do cliente", arte: "Arte", producao: "Arquivo de produção" };
+
+const EXTENSOES_ARQUIVO = ["pdf", "jpg", "png", "ai", "cdr", "psd"];
 
 const SITUACAO_LABEL: Record<Trabalho["situacao"], string> = {
   aguardando_producao: "Aguardando produção",
@@ -39,6 +67,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
   const usuarioId = sessao?.usuario.id ?? null;
   const podeVer = papel ? papelTemPermissao(papel, PERMISSOES.PRODUCAO_CONSULTAR) : false;
   const podeGerenciarTudo = papel ? papelTemPermissao(papel, PERMISSOES.PRODUCAO_GERENCIAR) : false;
+  const podeGerenciarArquivos = papel ? papelTemPermissao(papel, PERMISSOES.ARQUIVOS_GERENCIAR) : false;
+  const podeAnexarArquivos = podeGerenciarArquivos || papel === "atendente";
 
   const [trabalho, setTrabalho] = useState<Trabalho | null>(null);
   const [pedido, setPedido] = useState<Pedido | null>(null);
@@ -55,6 +85,20 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
   const [motivoRealocacao, setMotivoRealocacao] = useState("");
   const [motivoPausaAlocacao, setMotivoPausaAlocacao] = useState("");
 
+  const [arquivos, setArquivos] = useState<Arquivo[]>([]);
+  const [servico, setServico] = useState<Servico | null>(null);
+  const [comentariosTecnicos, setComentariosTecnicos] = useState<Record<string, string>>({});
+  const [mostrarFormularioArquivo, setMostrarFormularioArquivo] = useState(false);
+  const [grupoAlvoNovaVersao, setGrupoAlvoNovaVersao] = useState<string | null>(null);
+  const [arquivoFormNome, setArquivoFormNome] = useState("");
+  const [arquivoFormExtensao, setArquivoFormExtensao] = useState("pdf");
+  const [arquivoFormTamanhoKB, setArquivoFormTamanhoKB] = useState("");
+  const [arquivoFormPaginas, setArquivoFormPaginas] = useState("");
+  const [arquivoFormLarguraMm, setArquivoFormLarguraMm] = useState("");
+  const [arquivoFormAlturaMm, setArquivoFormAlturaMm] = useState("");
+  const [arquivoFormTipo, setArquivoFormTipo] = useState<TipoArquivo>("cliente");
+  const [arquivoFormOrigem, setArquivoFormOrigem] = useState<OrigemArquivo>("upload_interno");
+
   async function recarregar() {
     if (!podeVer) {
       setCarregando(false);
@@ -70,7 +114,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
       const etapaAtual = atual.workflow.etapas.find((etapa) => etapa.id === atual.etapaAtualId);
       const usaEquipamento = etapaAtual ? etapaAtual.tipo === "automatica" || etapaAtual.tipo === "hibrida" : false;
 
-      const [pedidoAtual, clienteAtual, listaEventos, listaEquipe, listaAlocacoes, listaEquipamentos, avaliacaoCompatibilidade] = await Promise.all([
+      const [pedidoAtual, clienteAtual, listaEventos, listaEquipe, listaAlocacoes, listaEquipamentos, avaliacaoCompatibilidade, listaArquivos, servicoAtual] = await Promise.all([
         repositories.pedidos.obter(atual.pedidoId).catch(() => null),
         atual.clienteId ? repositories.clientes.obter(atual.clienteId).catch(() => null) : Promise.resolve(null),
         repositories.auditoria.listar(atual.empresaId, 300),
@@ -78,6 +122,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
         repositories.alocacoesEquipamento.listarPorTrabalho(atual.id),
         repositories.equipamentos.listar(atual.empresaId),
         usaEquipamento ? repositories.alocacoesEquipamento.avaliarCompatibilidade(atual.id) : Promise.resolve([]),
+        repositories.arquivos.listarPorTrabalho(atual.id),
+        atual.servicoId ? repositories.servicos.obter(atual.servicoId).catch(() => null) : Promise.resolve(null),
       ]);
       setPedido(pedidoAtual);
       setCliente(clienteAtual);
@@ -86,6 +132,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
       setAlocacoes(listaAlocacoes);
       setEquipamentos(listaEquipamentos);
       setCompatibilidade(avaliacaoCompatibilidade);
+      setArquivos(listaArquivos);
+      setServico(servicoAtual);
     }
     setCarregando(false);
   }
@@ -187,6 +235,110 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
       await recarregar();
     } catch (erro) {
       showToast(erro instanceof Error ? erro.message : "Falha ao realocar.", "error");
+    }
+  }
+
+  // Agrupa versoes do mesmo arquivo logico e ordena do mais recente para o mais antigo dentro de cada grupo.
+  const gruposArquivo = Array.from(new Set(arquivos.map((arquivo) => arquivo.grupoArquivoId))).map((grupoId) => {
+    const versoes = arquivos.filter((arquivo) => arquivo.grupoArquivoId === grupoId).sort((a, b) => b.versao - a.versao);
+    return { grupoId, atual: versoes[0], historico: versoes.slice(1) };
+  });
+
+  function limparFormularioArquivo() {
+    setMostrarFormularioArquivo(false);
+    setGrupoAlvoNovaVersao(null);
+    setArquivoFormNome("");
+    setArquivoFormExtensao("pdf");
+    setArquivoFormTamanhoKB("");
+    setArquivoFormPaginas("");
+    setArquivoFormLarguraMm("");
+    setArquivoFormAlturaMm("");
+    setArquivoFormTipo("cliente");
+    setArquivoFormOrigem("upload_interno");
+  }
+
+  function abrirNovaVersao(arquivo: Arquivo) {
+    setGrupoAlvoNovaVersao(arquivo.grupoArquivoId);
+    setArquivoFormNome(arquivo.nome);
+    setArquivoFormExtensao(arquivo.extensao);
+    setArquivoFormTamanhoKB(String(Math.round(arquivo.tamanhoBytes / 1024)));
+    setArquivoFormPaginas(arquivo.analise?.paginas != null ? String(arquivo.analise.paginas) : "");
+    setArquivoFormLarguraMm(arquivo.analise?.larguraMm != null ? String(arquivo.analise.larguraMm) : "");
+    setArquivoFormAlturaMm(arquivo.analise?.alturaMm != null ? String(arquivo.analise.alturaMm) : "");
+    setMostrarFormularioArquivo(true);
+  }
+
+  async function handleSalvarArquivo() {
+    if (!arquivoFormNome.trim()) return showToast("Informe o nome do arquivo.", "error");
+    const tamanhoBytes = Math.round((Number(arquivoFormTamanhoKB) || 0) * 1024);
+    if (tamanhoBytes <= 0) return showToast("Informe um tamanho válido.", "error");
+    const metadados = {
+      nome: arquivoFormNome.trim(),
+      extensao: arquivoFormExtensao,
+      mimeType: arquivoFormExtensao === "pdf" ? "application/pdf" : `image/${arquivoFormExtensao}`,
+      tamanhoBytes,
+      paginas: arquivoFormPaginas ? Number(arquivoFormPaginas) : null,
+      larguraMm: arquivoFormLarguraMm ? Number(arquivoFormLarguraMm) : null,
+      alturaMm: arquivoFormAlturaMm ? Number(arquivoFormAlturaMm) : null,
+    };
+    try {
+      if (grupoAlvoNovaVersao) {
+        const nova = await repositories.arquivos.criarNovaVersao(grupoAlvoNovaVersao, metadados, usuarioId!);
+        showToast(`Versão ${nova.versao} recebida (preflight: ${nova.analise?.status ?? "—"}).`, nova.analise?.status === "bloqueio" ? "error" : "success");
+      } else {
+        const novo = await repositories.arquivos.receber(
+          { empresaId: trabalho!.empresaId, solicitacaoId: null, pedidoId: trabalho!.pedidoId, trabalhoId: trabalho!.id, tipo: arquivoFormTipo, origem: arquivoFormOrigem, enviadoPorUsuarioId: usuarioId, ...metadados },
+          usuarioId,
+        );
+        showToast(`Arquivo recebido (preflight: ${novo.analise?.status ?? "—"}).`, novo.analise?.status === "bloqueio" ? "error" : "success");
+      }
+      limparFormularioArquivo();
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao registrar arquivo.", "error");
+    }
+  }
+
+  async function handleAprovarTecnicamente(arquivo: Arquivo) {
+    try {
+      await repositories.arquivos.aprovarTecnicamente(arquivo.id, usuarioId!, comentariosTecnicos[arquivo.id]?.trim() || null);
+      showToast("Arquivo aprovado tecnicamente.", "success");
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao aprovar.", "error");
+    }
+  }
+
+  async function handleRejeitarTecnicamente(arquivo: Arquivo) {
+    try {
+      await repositories.arquivos.rejeitarTecnicamente(arquivo.id, usuarioId!, comentariosTecnicos[arquivo.id]?.trim() || null);
+      showToast("Arquivo rejeitado tecnicamente.", "success");
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao rejeitar.", "error");
+    }
+  }
+
+  async function handleEnviarParaAprovacaoCliente(arquivo: Arquivo) {
+    try {
+      const atualizado = await repositories.arquivos.enviarParaAprovacaoCliente(arquivo.id, usuarioId!);
+      showToast("Enviado para aprovação do cliente.", "success");
+      if (atualizado.tokenAprovacaoPublica) {
+        showToast(`Link público: /portal/arte/${atualizado.tokenAprovacaoPublica}`, "success");
+      }
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao enviar para aprovação.", "error");
+    }
+  }
+
+  async function handleLiberarParaProducao(arquivo: Arquivo) {
+    try {
+      await repositories.trabalhos.liberarArquivoParaProducao(trabalho!.id, arquivo.id, usuarioId!);
+      showToast(`${arquivo.nome} (v${arquivo.versao}) liberado para produção.`, "success");
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao liberar para produção.", "error");
     }
   }
 
@@ -332,6 +484,253 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
         ) : (
           <p className="mt-4 text-xs text-(--text-tertiary)">Você pode consultar este Trabalho, mas não pode movimentá-lo.</p>
         )}
+      </SurfaceCard>
+
+      <SurfaceCard className="p-5">
+        <SectionLabel>Arquivos</SectionLabel>
+        <p className="mt-1 text-xs text-(--text-tertiary)">
+          Aprovação técnica (atende aos requisitos de produção) e aprovação do cliente (concordou com a arte) são decisões diferentes, sempre
+          rastreadas separadamente.
+          {servico?.requisitoArquivo ? (
+            <>
+              {" "}
+              Requisito do serviço &quot;{servico.nome}&quot;:{" "}
+              {[
+                servico.requisitoArquivo.formatoEsperado?.toUpperCase(),
+                servico.requisitoArquivo.paginasEsperadas ? `${servico.requisitoArquivo.paginasEsperadas} pág.` : null,
+                servico.requisitoArquivo.larguraEsperadaMm && servico.requisitoArquivo.alturaEsperadaMm
+                  ? `${servico.requisitoArquivo.larguraEsperadaMm}x${servico.requisitoArquivo.alturaEsperadaMm}mm`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              .
+            </>
+          ) : null}
+        </p>
+
+        {gruposArquivo.length === 0 ? <p className="mt-3 workspace-empty-state">Nenhum arquivo recebido ainda para este Trabalho.</p> : null}
+
+        <ul className="mt-3 flex flex-col gap-3">
+          {gruposArquivo.map(({ grupoId, atual, historico }) => {
+            const liberado = trabalho.arquivoLiberadoId === atual.id;
+            const podeLiberar =
+              podeGerenciarTudo && !liberado && atual.statusAprovacaoTecnica === "aprovado" && (atual.tipo !== "arte" || atual.situacao === "aprovado_cliente");
+            return (
+              <li key={grupoId} className="rounded-xl border border-(--border) p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-(--text-primary)">
+                      {atual.nome} <span className="text-xs text-(--text-tertiary)">v{atual.versao} · {TIPO_ARQUIVO_LABEL[atual.tipo]}</span>
+                    </p>
+                    <p className="text-xs text-(--text-tertiary)">
+                      {(atual.tamanhoBytes / 1024).toFixed(0)} KB · enviado em {new Date(atual.enviadoEm).toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {liberado ? <StatusPill tone="success">Liberado para produção</StatusPill> : null}
+                    <StatusPill tone={atual.analise?.status === "bloqueio" ? "danger" : atual.analise?.status === "alerta" ? "warning" : "neutral"}>
+                      Preflight: {atual.analise?.status ?? "—"}
+                    </StatusPill>
+                    <StatusPill tone={atual.statusAprovacaoTecnica === "aprovado" ? "success" : atual.statusAprovacaoTecnica === "rejeitado" ? "danger" : "neutral"}>
+                      Técnica: {atual.statusAprovacaoTecnica}
+                    </StatusPill>
+                    <StatusPill tone={atual.situacao === "aprovado_cliente" ? "success" : atual.situacao === "rejeitado_cliente" ? "danger" : "accent"}>
+                      {SITUACAO_ARQUIVO_LABEL[atual.situacao]}
+                    </StatusPill>
+                  </div>
+                </div>
+
+                {atual.analise && atual.analise.regras.length > 0 ? (
+                  <ul className="mt-2 list-disc pl-5 text-xs text-(--text-tertiary)">
+                    {atual.analise.regras.map((regra, indice) => (
+                      <li key={indice} className={regra.severidade === "bloqueio" ? "text-(--danger)" : undefined}>
+                        {regra.mensagem}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                {atual.aprovacaoTecnica ? (
+                  <p className="mt-2 text-xs text-(--text-tertiary)">
+                    Aprovação técnica em {new Date(atual.aprovacaoTecnica.data).toLocaleString("pt-BR")}
+                    {atual.aprovacaoTecnica.comentario ? ` — "${atual.aprovacaoTecnica.comentario}"` : ""}
+                  </p>
+                ) : null}
+                {atual.aprovacaoCliente ? (
+                  <p className="mt-1 text-xs text-(--text-tertiary)">
+                    Cliente {atual.aprovacaoCliente.aprovado ? "aprovou" : "respondeu"} em {new Date(atual.aprovacaoCliente.data).toLocaleString("pt-BR")}
+                    {atual.aprovacaoCliente.comentario ? ` — "${atual.aprovacaoCliente.comentario}"` : ""}
+                  </p>
+                ) : null}
+                {atual.tokenAprovacaoPublica && atual.situacao === "aguardando_aprovacao_cliente" ? (
+                  <p className="mt-1 text-xs text-(--text-tertiary)">
+                    Link público:{" "}
+                    <Link href={`/portal/arte/${atual.tokenAprovacaoPublica}`} target="_blank" className="text-(--accent-strong) hover:underline">
+                      /portal/arte/{atual.tokenAprovacaoPublica}
+                    </Link>
+                  </p>
+                ) : null}
+
+                {podeGerenciarArquivos && atual.statusAprovacaoTecnica === "pendente" ? (
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <input
+                      type="text"
+                      placeholder="Comentário (opcional)"
+                      className="workspace-input"
+                      value={comentariosTecnicos[atual.id] ?? ""}
+                      onChange={(event) => setComentariosTecnicos((prev) => ({ ...prev, [atual.id]: event.target.value }))}
+                    />
+                    <button type="button" id={`arquivo-btn-aprovar-${atual.id}`} className="workspace-button-primary" onClick={() => void handleAprovarTecnicamente(atual)}>
+                      Aprovar tecnicamente
+                    </button>
+                    <button type="button" id={`arquivo-btn-rejeitar-${atual.id}`} className="workspace-button-secondary" onClick={() => void handleRejeitarTecnicamente(atual)}>
+                      Rejeitar tecnicamente
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {podeAnexarArquivos && (atual.tipo === "arte" || atual.situacao === "em_criacao" || atual.situacao === "alteracao_solicitada") ? (
+                    <button
+                      type="button"
+                      id={`arquivo-btn-enviar-cliente-${atual.id}`}
+                      className="workspace-button-secondary"
+                      onClick={() => void handleEnviarParaAprovacaoCliente(atual)}
+                    >
+                      Enviar para aprovação do cliente
+                    </button>
+                  ) : null}
+                  {podeLiberar ? (
+                    <button type="button" id={`arquivo-btn-liberar-${atual.id}`} className="workspace-button-primary" onClick={() => void handleLiberarParaProducao(atual)}>
+                      Liberar para produção
+                    </button>
+                  ) : null}
+                  {podeAnexarArquivos ? (
+                    <button type="button" id={`arquivo-btn-nova-versao-${atual.id}`} className="workspace-button-secondary" onClick={() => abrirNovaVersao(atual)}>
+                      Nova versão
+                    </button>
+                  ) : null}
+                </div>
+
+                {historico.length > 0 ? (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs font-medium text-(--text-tertiary)">Histórico de versões ({historico.length})</summary>
+                    <ul className="mt-2 flex flex-col gap-1 text-xs text-(--text-secondary)">
+                      {historico.map((versaoAntiga) => (
+                        <li key={versaoAntiga.id} className="flex justify-between border-b border-(--border) py-1">
+                          <span>
+                            v{versaoAntiga.versao} — {versaoAntiga.nome} ({SITUACAO_ARQUIVO_LABEL[versaoAntiga.situacao]})
+                            {trabalho.arquivoLiberadoId === versaoAntiga.id ? " · liberado para produção" : ""}
+                          </span>
+                          <span className="text-(--text-tertiary)">{new Date(versaoAntiga.enviadoEm).toLocaleString("pt-BR")}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+
+        {podeAnexarArquivos ? (
+          <div className="mt-4">
+            {!mostrarFormularioArquivo ? (
+              <button
+                type="button"
+                id="arquivo-btn-adicionar"
+                className="workspace-button-secondary"
+                onClick={() => {
+                  setGrupoAlvoNovaVersao(null);
+                  setMostrarFormularioArquivo(true);
+                }}
+              >
+                Adicionar arquivo
+              </button>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-(--border) bg-(--bg-muted) p-4 sm:grid-cols-2 lg:grid-cols-4">
+                <p className="text-xs font-medium text-(--text-tertiary) lg:col-span-4">
+                  {grupoAlvoNovaVersao ? "Nova versão — nunca sobrescreve, cria um novo registro ligado ao anterior." : "Novo arquivo (metadados simulados — MVP sem armazenamento binário real)."}
+                </p>
+                <div>
+                  <label htmlFor="arquivo-form-nome" className="workspace-label">
+                    Nome do arquivo
+                  </label>
+                  <input id="arquivo-form-nome" type="text" className="workspace-input" value={arquivoFormNome} onChange={(event) => setArquivoFormNome(event.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="arquivo-form-extensao" className="workspace-label">
+                    Extensão
+                  </label>
+                  <select id="arquivo-form-extensao" className="workspace-select" value={arquivoFormExtensao} onChange={(event) => setArquivoFormExtensao(event.target.value)}>
+                    {EXTENSOES_ARQUIVO.map((extensao) => (
+                      <option key={extensao} value={extensao}>
+                        {extensao.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="arquivo-form-tamanho" className="workspace-label">
+                    Tamanho (KB)
+                  </label>
+                  <input id="arquivo-form-tamanho" type="number" className="workspace-input" value={arquivoFormTamanhoKB} onChange={(event) => setArquivoFormTamanhoKB(event.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="arquivo-form-paginas" className="workspace-label">
+                    Páginas
+                  </label>
+                  <input id="arquivo-form-paginas" type="number" className="workspace-input" value={arquivoFormPaginas} onChange={(event) => setArquivoFormPaginas(event.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="arquivo-form-largura" className="workspace-label">
+                    Largura (mm)
+                  </label>
+                  <input id="arquivo-form-largura" type="number" className="workspace-input" value={arquivoFormLarguraMm} onChange={(event) => setArquivoFormLarguraMm(event.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="arquivo-form-altura" className="workspace-label">
+                    Altura (mm)
+                  </label>
+                  <input id="arquivo-form-altura" type="number" className="workspace-input" value={arquivoFormAlturaMm} onChange={(event) => setArquivoFormAlturaMm(event.target.value)} />
+                </div>
+                {!grupoAlvoNovaVersao ? (
+                  <>
+                    <div>
+                      <label htmlFor="arquivo-form-tipo" className="workspace-label">
+                        Tipo
+                      </label>
+                      <select id="arquivo-form-tipo" className="workspace-select" value={arquivoFormTipo} onChange={(event) => setArquivoFormTipo(event.target.value as TipoArquivo)}>
+                        <option value="cliente">Arquivo do cliente (arte pronta)</option>
+                        <option value="arte">Arte (criação interna)</option>
+                        <option value="producao">Arquivo de produção</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="arquivo-form-origem" className="workspace-label">
+                        Origem
+                      </label>
+                      <select id="arquivo-form-origem" className="workspace-select" value={arquivoFormOrigem} onChange={(event) => setArquivoFormOrigem(event.target.value as OrigemArquivo)}>
+                        <option value="upload_interno">Upload interno</option>
+                        <option value="email">E-mail</option>
+                        <option value="portal_cliente">Portal do cliente</option>
+                      </select>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex items-end gap-2 lg:col-span-4">
+                  <button type="button" id="arquivo-form-btn-salvar" className="workspace-button-primary" onClick={() => void handleSalvarArquivo()}>
+                    {grupoAlvoNovaVersao ? "Enviar nova versão" : "Registrar arquivo"}
+                  </button>
+                  <button type="button" id="arquivo-form-btn-cancelar" className="workspace-button-secondary" onClick={limparFormularioArquivo}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
       </SurfaceCard>
 
       {etapaUsaEquipamento ? (
