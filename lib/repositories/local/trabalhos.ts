@@ -90,6 +90,8 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
           etapas: etapas.map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo })),
         },
         etapaAtualId: etapas[0].id,
+        formato: dados.formato,
+        tipoEquipamentoNecessario: dados.tipoEquipamentoNecessario,
         criadoEm: new Date().toISOString(),
         concluidoEm: null,
       };

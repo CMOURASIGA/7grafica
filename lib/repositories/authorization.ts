@@ -94,6 +94,28 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
       return trabalho?.responsavelUsuarioId === usuarioId;
     },
   },
+
+  // SPEC 06 — Producao e Equipamentos. Criar alocacao e realocar exigem
+  // PRODUCAO_GERENCIAR (admin/gerente — "gerenciamento de... alocacao e
+  // realocacao"). Todos os papeis leem/avaliam compatibilidade
+  // (PRODUCAO_CONSULTAR). Operador ganha a mesma excecao por registro do
+  // Trabalho: executar (preparar/iniciar/pausar/retomar/concluir) a
+  // alocacao cujo Trabalho e o responsavel — nunca criar nem realocar.
+  alocacoesEquipamento: {
+    gerenciar: PERMISSOES.PRODUCAO_GERENCIAR,
+    visualizar: PERMISSOES.PRODUCAO_CONSULTAR,
+    permitirSe: async ({ papel, usuarioId, metodo, args, baseRepositories }) => {
+      if (papel !== "operador" || !usuarioId) return false;
+      const METODOS_DO_RESPONSAVEL = new Set(["iniciarPreparacao", "iniciar", "pausar", "retomar", "concluir"]);
+      if (!METODOS_DO_RESPONSAVEL.has(metodo)) return false;
+      const alocacaoId = args[0];
+      if (typeof alocacaoId !== "string") return false;
+      const alocacao = await baseRepositories.alocacoesEquipamento.obter(alocacaoId);
+      if (!alocacao) return false;
+      const trabalho = await baseRepositories.trabalhos.obter(alocacao.trabalhoId);
+      return trabalho?.responsavelUsuarioId === usuarioId;
+    },
+  },
 };
 
 /**
@@ -119,9 +141,11 @@ const METODOS_LEITURA = new Set([
   "listarPorSolicitacao",
   "listarPorOrcamento",
   "listarPorPedido",
+  "listarPorTrabalho",
   "listarPorCaixa",
   "obterAberto",
   "obterResumo",
+  "avaliarCompatibilidade",
 ]);
 
 function protegerRepositorio<T extends object>(

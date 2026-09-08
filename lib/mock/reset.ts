@@ -67,11 +67,11 @@ export function restaurarDadosDemo(): void {
   gravarColecao("trabalhos", trabalhosSeed);
 }
 
-// v4: SPEC 05 introduziu Trabalho (com snapshot de Workflow/Etapas) — sem um
-// Trabalho seedado a sessao ficaria sem dado nenhum para validar o Kanban.
-// Incrementado para forcar reseed automatico em navegadores com bootstrap
-// anterior.
-const CHAVE_BOOTSTRAP = "bootstrap_v4";
+// v5: SPEC 06 acrescentou Equipamento.situacao/capacidadeSimultanea,
+// CapacidadeEquipamento.materiaisCompativeisIds e Trabalho.formato/
+// tipoEquipamentoNecessario — sem o reseed, sessoes antigas leriam esses
+// campos como undefined.
+const CHAVE_BOOTSTRAP = "bootstrap_v5";
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {

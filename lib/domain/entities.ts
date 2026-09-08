@@ -149,15 +149,28 @@ export type Equipamento = {
   nome: string;
   tipo: TipoEquipamento;
   ativo: boolean;
+  /**
+   * SPEC 06: estado operacional atual — distinto de `ativo` (que e sobre o
+   * cadastro existir). Default "disponivel" na criacao.
+   */
+  situacao: SituacaoEquipamento;
+  /**
+   * SPEC 06: quantos Trabalhos este equipamento processa ao mesmo tempo.
+   * MVP assume 1 na maioria dos casos, mas o modelo ja aceita >1 para
+   * equipamentos que processam lotes/trabalhos em paralelo.
+   */
+  capacidadeSimultanea: number;
 };
 
 export type CapacidadeEquipamento = {
   id: string;
   empresaId: string;
   equipamentoId: string;
-  formatos: string; // ex.: "A4, A3, Oficio"
+  formatos: string; // ex.: "A4, A3, Oficio" — lista separada por virgula, comparada sem diferenciar maiusculas/minusculas
   corPB: "cor" | "pb" | "ambos";
   duplex: boolean;
+  /** SPEC 06: materiais compativeis (ids de Material). Lista vazia = sem restricao de material. */
+  materiaisCompativeisIds: string[];
   observacoes: string | null;
 };
 
@@ -432,6 +445,84 @@ export type Trabalho = {
   workflow: WorkflowSnapshot;
   /** Aponta para um id dentro de workflow.etapas — nunca para o cadastro vivo. */
   etapaAtualId: string;
+  /**
+   * SPEC 06: formato de impressao/producao exigido (ex.: "A3", "A4") —
+   * usado pela regra de compatibilidade de equipamento. Null quando o
+   * Trabalho nao depende de formato (etapas so humanas, por exemplo).
+   */
+  formato: string | null;
+  /**
+   * SPEC 06: categoria de equipamento que a etapa automatica/hibrida deste
+   * Trabalho exige (ex.: "impressora"). Null quando nenhuma etapa do
+   * workflow usa equipamento (workflow so humano).
+   */
+  tipoEquipamentoNecessario: TipoEquipamento | null;
   criadoEm: string;
   concluidoEm: string | null;
+};
+
+// --- SPEC 06: Producao e Equipamentos --------------------------------------
+//
+// Trabalho passa a representar COMO a producao sera executada, nao so um
+// card percorrendo etapas. Etapas "automatica"/"hibrida" (ver TipoEtapa)
+// podem exigir um Equipamento; etapas "humana" nunca associam equipamento.
+// Ponto futuro de produto (registrado, NAO desenvolvido nesta spec): uma
+// visao consolidada da producao quando existirem simultaneamente Trabalhos
+// de workflows diferentes.
+
+/**
+ * "disponivel"/"em_uso" sao estados operacionais normais; "indisponivel" e
+ * "manutencao" bloqueiam NOVAS alocacoes. Independente do campo `ativo`
+ * (que e sobre o cadastro existir/estar habilitado, nao sobre a maquina
+ * estar fisicamente pronta agora).
+ */
+export type SituacaoEquipamento = "disponivel" | "em_uso" | "indisponivel" | "manutencao";
+
+export type SituacaoAlocacaoEquipamento = "aguardando" | "preparacao" | "em_execucao" | "pausada" | "concluida" | "cancelada";
+
+/**
+ * Uma execucao de uma etapa (automatica/hibrida) de um Trabalho em um
+ * Equipamento especifico. Nunca apagada — uma realocacao encerra esta
+ * (situacao "cancelada", com motivoRealocacao) e cria uma NOVA linha
+ * apontando de volta via alocacaoAnteriorId, preservando o historico
+ * completo de qual equipamento fez o que.
+ */
+export type AlocacaoEquipamento = {
+  id: string;
+  empresaId: string;
+  trabalhoId: string;
+  /** Aponta para um id dentro do workflow.etapas do Trabalho — nunca para o cadastro vivo. */
+  etapaId: string;
+  equipamentoId: string;
+  /** Quem executa/acompanha — obrigatorio em etapas hibridas, opcional em automaticas puras. */
+  operadorUsuarioId: string | null;
+  situacao: SituacaoAlocacaoEquipamento;
+  inicioPrevisto: string | null;
+  inicioReal: string | null;
+  terminoReal: string | null;
+  /** Preenchido sempre que a alocacao e pausada. */
+  motivoPausa: string | null;
+  /** Preenchido apenas na alocacao ENCERRADA por realocacao (situacao "cancelada"). */
+  motivoRealocacao: string | null;
+  /** Se esta alocacao nasceu de uma realocacao, aponta para a alocacao substituida. */
+  alocacaoAnteriorId: string | null;
+  /**
+   * true quando o equipamento ficou indisponivel/manutencao enquanto esta
+   * alocacao ainda estava ativa — nunca movida ou apagada silenciosamente,
+   * fica sinalizada ate uma decisao humana (retomar quando o equipamento
+   * voltar, ou realocar para outro equipamento compativel).
+   */
+  precisaDecisaoHumana: boolean;
+  criadaPorUsuarioId: string;
+  criadoEm: string;
+  atualizadoEm: string;
+};
+
+/** Motivo determinístico de compatibilidade/incompatibilidade de um Equipamento com um Trabalho. */
+export type MotivoCompatibilidadeEquipamento = { tipo: "formato" | "material" | "situacao" | "tipo_equipamento"; mensagem: string };
+
+export type AvaliacaoCompatibilidadeEquipamento = {
+  equipamentoId: string;
+  compativel: boolean;
+  motivos: MotivoCompatibilidadeEquipamento[];
 };

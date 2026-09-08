@@ -77,6 +77,18 @@ export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
  *   pontual: mover/concluir/pausar/retomar/registrarPendencia sao permitidos
  *   quando o Trabalho alvo tem esse Operador como responsavel. Atribuir
  *   responsavel e cancelar continuam exclusivos de PRODUCAO_GERENCIAR.
+ *
+ * Producao e Equipamentos (SPEC 06): reaproveita as MESMAS permissoes acima
+ * (nenhuma nova permissao foi criada).
+ * - Admin/Gerente (PRODUCAO_GERENCIAR): gerenciam disponibilidade de
+ *   equipamentos (CADASTROS_GERENCIAR, ja exclusivo deles), criam alocacoes
+ *   e realocam.
+ * - Atendente (so PRODUCAO_CONSULTAR): consulta o andamento, nunca aloca ou
+ *   movimenta equipamento/producao.
+ * - Operador (so PRODUCAO_CONSULTAR na matriz): ganha, via `permitirSe` em
+ *   lib/repositories/authorization.ts, a mesma excecao por registro —
+ *   iniciar preparo/execucao, pausar, retomar e concluir a alocacao cujo
+ *   Trabalho e o responsavel. Nunca cria nem realoca.
  */
 export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
   admin: [

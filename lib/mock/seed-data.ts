@@ -146,17 +146,25 @@ export const conversoesUnidadeSeed: ConversaoUnidade[] = [
 ];
 
 export const equipamentosSeed: Equipamento[] = [
-  { id: "equip-1", empresaId: EMPRESA_DEMO_ID, nome: "Impressora Digital HP Indigo", tipo: "impressora", ativo: true },
-  { id: "equip-2", empresaId: EMPRESA_DEMO_ID, nome: "Plotter Lona 3.2m", tipo: "impressora", ativo: true },
-  { id: "equip-3", empresaId: EMPRESA_DEMO_ID, nome: "Guilhotina Industrial 92cm", tipo: "guilhotina", ativo: true },
-  { id: "equip-4", empresaId: EMPRESA_DEMO_ID, nome: "Encadernadora Espiral", tipo: "encadernadora", ativo: true },
+  { id: "equip-1", empresaId: EMPRESA_DEMO_ID, nome: "Impressora Digital HP Indigo", tipo: "impressora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 },
+  { id: "equip-2", empresaId: EMPRESA_DEMO_ID, nome: "Plotter Lona 3.2m", tipo: "impressora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 },
+  { id: "equip-3", empresaId: EMPRESA_DEMO_ID, nome: "Guilhotina Industrial 92cm", tipo: "guilhotina", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 },
+  { id: "equip-4", empresaId: EMPRESA_DEMO_ID, nome: "Encadernadora Espiral", tipo: "encadernadora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 2 },
+  // Formato compativel (A3) mas homologada so para lona — demonstra
+  // incompatibilidade por MATERIAL isolada (ver docs de compatibilidade).
+  { id: "equip-5", empresaId: EMPRESA_DEMO_ID, nome: "Impressora Grande Formato Presswell", tipo: "impressora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 },
+  // Backup da equip-1 (mesmo formato/material) — usada para demonstrar
+  // realocacao quando a maquina principal fica indisponivel em producao.
+  { id: "equip-6", empresaId: EMPRESA_DEMO_ID, nome: "Impressora Digital HP Indigo (backup)", tipo: "impressora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 },
 ];
 
 export const capacidadesEquipamentoSeed: CapacidadeEquipamento[] = [
-  { id: "cap-1", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-1", formatos: "A4, A3, SRA3", corPB: "ambos", duplex: true, observacoes: null },
-  { id: "cap-2", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-2", formatos: "Ate 3.2m de largura", corPB: "cor", duplex: false, observacoes: "Impressao solvente." },
-  { id: "cap-3", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-3", formatos: "Ate 92cm", corPB: "ambos", duplex: false, observacoes: "Corte reto de pilhas ate 8cm de altura." },
-  { id: "cap-4", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-4", formatos: "A4, A5, Oficio", corPB: "ambos", duplex: false, observacoes: null },
+  { id: "cap-1", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-1", formatos: "A4, A3, SRA3", corPB: "ambos", duplex: true, materiaisCompativeisIds: ["material-1"], observacoes: null },
+  { id: "cap-2", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-2", formatos: "Ate 3.2m de largura", corPB: "cor", duplex: false, materiaisCompativeisIds: ["material-2", "material-5"], observacoes: "Impressao solvente." },
+  { id: "cap-3", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-3", formatos: "Ate 92cm", corPB: "ambos", duplex: false, materiaisCompativeisIds: [], observacoes: "Corte reto de pilhas ate 8cm de altura." },
+  { id: "cap-4", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-4", formatos: "A4, A5, Oficio", corPB: "ambos", duplex: false, materiaisCompativeisIds: ["material-4"], observacoes: null },
+  { id: "cap-5", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-5", formatos: "A3, A2", corPB: "ambos", duplex: false, materiaisCompativeisIds: ["material-2"], observacoes: "Nao homologada para papel couche." },
+  { id: "cap-6", empresaId: EMPRESA_DEMO_ID, equipamentoId: "equip-6", formatos: "A4, A3, SRA3", corPB: "ambos", duplex: true, materiaisCompativeisIds: ["material-1"], observacoes: "Maquina backup." },
 ];
 
 export const formasPagamentoSeed: FormaPagamento[] = [
@@ -353,6 +361,12 @@ export const trabalhosSeed: Trabalho[] = [
         .map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo })),
     },
     etapaAtualId: "etapa-1-3",
+    // SPEC 06: a etapa atual (etapa-1-3, "Impressao", tipo "automatica") exige
+    // equipamento — formato A3 + material Couche reproduzem o exemplo de
+    // compatibilidade da spec (equip-1 compativel, equip-2 e equip-5
+    // incompativeis por motivos diferentes).
+    formato: "A3",
+    tipoEquipamentoNecessario: "impressora",
     criadoEm: "2026-02-20T09:00:00.000Z",
     concluidoEm: null,
   },

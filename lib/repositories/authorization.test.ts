@@ -64,7 +64,7 @@ describe("RBAC dos Cadastros — repositorio (lib/repositories/authorization.ts)
     });
     expect(cliente.id).toBeTruthy();
     await expect(
-      repos.equipamentos.criar({ empresaId: EMPRESA_ID, nome: "Impressora Gerente", tipo: "impressora", ativo: true }),
+      repos.equipamentos.criar({ empresaId: EMPRESA_ID, nome: "Impressora Gerente", tipo: "impressora", ativo: true, situacao: "disponivel", capacidadeSimultanea: 1 }),
     ).resolves.toBeTruthy();
 
     // Negado: "sem alterar papeis/permissoes administrativas" — permissao Foundation, nao de Cadastros.
@@ -234,6 +234,8 @@ describe("RBAC de Producao/Kanban (SPEC 05) — repositorio", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
     return { base, trabalho };
   }
@@ -270,6 +272,8 @@ describe("RBAC de Producao/Kanban (SPEC 05) — repositorio", () => {
         observacoes: null,
         origem: "balcao",
         workflowId: trabalho.workflow.workflowId,
+        formato: null,
+        tipoEquipamentoNecessario: null,
       }),
     ).rejects.toBeInstanceOf(PermissaoNegadaError);
   });
@@ -295,5 +299,115 @@ describe("RBAC de Producao/Kanban (SPEC 05) — repositorio", () => {
     await expect(repoDono.trabalhos.cancelar(trabalho.id, "usuario-operador-dono", "motivo qualquer")).rejects.toBeInstanceOf(
       PermissaoNegadaError,
     );
+  });
+});
+
+describe("RBAC de Producao e Equipamentos (SPEC 06) — repositorio", () => {
+  beforeEach(() => {
+    limparNamespace();
+  });
+
+  async function prepararAlocacao(responsavelUsuarioId: string | null) {
+    const base = criarRepositoriesLocal();
+    const equipamento = await base.equipamentos.criar({
+      empresaId: EMPRESA_ID,
+      nome: "Impressora Teste",
+      tipo: "impressora",
+      ativo: true,
+      situacao: "disponivel",
+      capacidadeSimultanea: 1,
+    });
+    await base.capacidadesEquipamento.criar({
+      empresaId: EMPRESA_ID,
+      equipamentoId: equipamento.id,
+      formatos: "A4, A3",
+      corPB: "ambos",
+      duplex: true,
+      materiaisCompativeisIds: [],
+      observacoes: null,
+    });
+    const workflow = await base.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow com equipamento", categoriaServicoId: null, ativo: true });
+    const etapa = await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Impressao", tipo: "automatica" });
+    const trabalho = await base.trabalhos.criar({
+      empresaId: EMPRESA_ID,
+      pedidoId: "pedido-qualquer",
+      clienteId: null,
+      descricao: "Teste",
+      quantidade: 1,
+      servicoId: null,
+      materialId: null,
+      acabamentos: null,
+      prazo: null,
+      prioridade: "normal",
+      responsavelUsuarioId,
+      observacoes: null,
+      origem: "balcao",
+      workflowId: workflow.id,
+      formato: "A3",
+      tipoEquipamentoNecessario: "impressora",
+    });
+    const alocacao = await base.alocacoesEquipamento.criar(
+      { empresaId: EMPRESA_ID, trabalhoId: trabalho.id, etapaId: etapa.id, equipamentoId: equipamento.id, operadorUsuarioId: responsavelUsuarioId, inicioPrevisto: null },
+      "usuario-gerente",
+    );
+    return { base, equipamento, trabalho, alocacao };
+  }
+
+  it("Admin/Gerente: criam alocacao, iniciam, pausam e concluem qualquer uma; equipamentos.atualizarSituacao exclusivo deles", async () => {
+    const { base, alocacao, equipamento } = await prepararAlocacao(null);
+    const repos = protegerRepositories(base, "gerente", "usuario-gerente");
+    await expect(repos.alocacoesEquipamento.iniciar(alocacao.id, "usuario-gerente")).resolves.toMatchObject({ situacao: "em_execucao" });
+    await expect(repos.equipamentos.atualizarSituacao(equipamento.id, "usuario-gerente", "manutencao")).resolves.toMatchObject({
+      situacao: "manutencao",
+    });
+  });
+
+  it("Atendente: so consulta — nao cria alocacao nem muda situacao de equipamento", async () => {
+    const { base, trabalho, equipamento } = await prepararAlocacao(null);
+    const repos = protegerRepositories(base, "atendente", "usuario-atendente");
+    await expect(repos.alocacoesEquipamento.listar(EMPRESA_ID)).resolves.not.toThrow;
+    await expect(
+      repos.alocacoesEquipamento.criar(
+        { empresaId: EMPRESA_ID, trabalhoId: trabalho.id, etapaId: "etapa-x", equipamentoId: equipamento.id, operadorUsuarioId: null, inicioPrevisto: null },
+        "usuario-atendente",
+      ),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repos.equipamentos.atualizarSituacao(equipamento.id, "usuario-atendente", "manutencao")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
+  });
+
+  it("Operador: executa (iniciar/pausar/concluir) so a alocacao cujo Trabalho e responsavel; nunca cria nem realoca", async () => {
+    const { base, alocacao, equipamento } = await prepararAlocacao("usuario-operador-dono");
+    const repoDono = protegerRepositories(base, "operador", "usuario-operador-dono");
+
+    await expect(repoDono.alocacoesEquipamento.iniciar(alocacao.id, "usuario-operador-dono")).resolves.toMatchObject({ situacao: "em_execucao" });
+    await expect(repoDono.alocacoesEquipamento.pausar(alocacao.id, "usuario-operador-dono", "Motivo")).resolves.toMatchObject({ situacao: "pausada" });
+    await expect(repoDono.alocacoesEquipamento.retomar(alocacao.id, "usuario-operador-dono")).resolves.toMatchObject({ situacao: "em_execucao" });
+    await expect(repoDono.alocacoesEquipamento.concluir(alocacao.id, "usuario-operador-dono")).resolves.toMatchObject({ situacao: "concluida" });
+
+    // Nunca cria nem realoca, nem muda situacao do equipamento — mesmo sendo o dono do Trabalho.
+    await expect(
+      repoDono.alocacoesEquipamento.realocar(alocacao.id, "usuario-operador-dono", equipamento.id, "motivo qualquer"),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repoDono.equipamentos.atualizarSituacao(equipamento.id, "usuario-operador-dono", "manutencao")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
+
+    const { alocacao: alocacaoDeOutro } = await prepararAlocacao("usuario-outro-operador");
+    const repoNaoResponsavel = protegerRepositories(base, "operador", "usuario-operador-dono");
+    await expect(repoNaoResponsavel.alocacoesEquipamento.iniciar(alocacaoDeOutro.id, "usuario-operador-dono")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
+  });
+
+  it("Atendente: consulta leituras auxiliares (listarPorTrabalho, avaliarCompatibilidade) sem precisar de PRODUCAO_GERENCIAR", async () => {
+    const { base, trabalho } = await prepararAlocacao(null);
+    const repos = protegerRepositories(base, "atendente", "usuario-atendente");
+    // Regressao: listarPorTrabalho/avaliarCompatibilidade sao LEITURA — nao podem
+    // exigir a permissao de escrita (PRODUCAO_GERENCIAR), senao a pagina do
+    // Trabalho quebra para quem so tem PRODUCAO_CONSULTAR (atendente/operador).
+    await expect(repos.alocacoesEquipamento.listarPorTrabalho(trabalho.id)).resolves.toHaveLength(1);
+    await expect(repos.alocacoesEquipamento.avaliarCompatibilidade(trabalho.id)).resolves.toBeInstanceOf(Array);
   });
 });

@@ -1,14 +1,4 @@
-import type {
-  CategoriaServico,
-  Equipamento,
-  FeatureFlag,
-  FormaPagamento,
-  Material,
-  Servico,
-  UnidadeMedida,
-  Workflow,
-  Fornecedor,
-} from "@/lib/domain/entities";
+import type { CategoriaServico, FeatureFlag, FormaPagamento, Material, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
 import type { Repositories } from "@/lib/repositories/types";
 import { criarCrudLocal } from "@/lib/repositories/local/crud-generico";
 import { criarEmpresaRepositoryLocal } from "@/lib/repositories/local/empresas";
@@ -30,6 +20,8 @@ import { criarCaixaRepositoryLocal } from "@/lib/repositories/local/caixa";
 import { criarMovimentoCaixaRepositoryLocal } from "@/lib/repositories/local/movimentos-caixa";
 import { criarRecebimentoRepositoryLocal } from "@/lib/repositories/local/recebimentos";
 import { criarTrabalhoRepositoryLocal } from "@/lib/repositories/local/trabalhos";
+import { criarEquipamentoRepositoryLocal } from "@/lib/repositories/local/equipamentos";
+import { criarAlocacaoEquipamentoRepositoryLocal } from "@/lib/repositories/local/alocacoes-equipamento";
 
 /**
  * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
@@ -54,7 +46,7 @@ export function criarRepositoriesLocal(): Repositories {
     unidadesMedida: criarCrudLocal<UnidadeMedida, Omit<UnidadeMedida, "id">>("unidades_medida", "unidade"),
     materiais: criarCrudLocal<Material, Omit<Material, "id">>("materiais", "material"),
     conversoesUnidade: criarConversaoUnidadeRepositoryLocal(),
-    equipamentos: criarCrudLocal<Equipamento, Omit<Equipamento, "id">>("equipamentos", "equip"),
+    equipamentos: criarEquipamentoRepositoryLocal(),
     capacidadesEquipamento: criarCapacidadeEquipamentoRepositoryLocal(),
     formasPagamento: criarCrudLocal<FormaPagamento, Omit<FormaPagamento, "id">>("formas_pagamento", "fp"),
     workflows: criarCrudLocal<Workflow, Omit<Workflow, "id">>("workflows", "workflow"),
@@ -71,5 +63,7 @@ export function criarRepositoriesLocal(): Repositories {
     recebimentos: criarRecebimentoRepositoryLocal(),
 
     trabalhos: criarTrabalhoRepositoryLocal(),
+
+    alocacoesEquipamento: criarAlocacaoEquipamentoRepositoryLocal(),
   };
 }

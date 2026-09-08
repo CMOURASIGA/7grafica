@@ -6,7 +6,15 @@ import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/u
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
-import type { Cliente, EventoAuditoria, FormaPagamento, Pedido, PrioridadeTrabalho, Recebimento, Trabalho, Workflow } from "@/lib/domain/entities";
+import type { Cliente, EventoAuditoria, FormaPagamento, Material, Pedido, PrioridadeTrabalho, Recebimento, Trabalho, TipoEquipamento, Workflow } from "@/lib/domain/entities";
+
+const TIPOS_EQUIPAMENTO: { value: TipoEquipamento; label: string }[] = [
+  { value: "impressora", label: "Impressora" },
+  { value: "guilhotina", label: "Guilhotina" },
+  { value: "encadernadora", label: "Encadernadora" },
+  { value: "laminadora", label: "Laminadora" },
+  { value: "outro", label: "Outro" },
+];
 
 const ORIGEM_LABEL: Record<Pedido["origem"], string> = { email: "E-mail / Orçamento", balcao: "Balcão" };
 const STATUS_ENTREGA_LABEL: Record<Pedido["statusEntrega"], string> = {
@@ -43,6 +51,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const [caixaAbertoId, setCaixaAbertoId] = useState<string | null>(null);
   const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const [formaPagamentoId, setFormaPagamentoId] = useState("");
@@ -54,6 +63,9 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const [novoTrabalhoWorkflowId, setNovoTrabalhoWorkflowId] = useState("");
   const [novoTrabalhoPrazo, setNovoTrabalhoPrazo] = useState("");
   const [novoTrabalhoPrioridade, setNovoTrabalhoPrioridade] = useState<PrioridadeTrabalho>("normal");
+  const [novoTrabalhoMaterialId, setNovoTrabalhoMaterialId] = useState("");
+  const [novoTrabalhoFormato, setNovoTrabalhoFormato] = useState("");
+  const [novoTrabalhoTipoEquipamento, setNovoTrabalhoTipoEquipamento] = useState("");
 
   async function recarregar() {
     if (!podeAcessar) {
@@ -63,7 +75,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
     const atual = await repositories.pedidos.obter(id);
     setPedido(atual);
     if (atual) {
-      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto, listaTrabalhos, listaWorkflows] = await Promise.all([
+      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto, listaTrabalhos, listaWorkflows, listaMateriais] = await Promise.all([
         atual.clienteId ? repositories.clientes.obter(atual.clienteId) : Promise.resolve(null),
         repositories.recebimentos.listarPorPedido(atual.id),
         repositories.formasPagamento.listar(atual.empresaId),
@@ -71,6 +83,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         repositories.caixa.obterAberto(atual.empresaId).catch(() => null),
         podeVerProducao ? repositories.trabalhos.listarPorPedido(atual.id) : Promise.resolve([]),
         podeGerarTrabalho ? repositories.workflows.listar(atual.empresaId) : Promise.resolve([]),
+        podeGerarTrabalho ? repositories.materiais.listar(atual.empresaId) : Promise.resolve([]),
       ]);
       setCliente(clienteAtual);
       setRecebimentos(listaRecebimentos);
@@ -79,6 +92,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
       setCaixaAbertoId(caixaAberto?.id ?? null);
       setTrabalhos(listaTrabalhos);
       setWorkflows(listaWorkflows.filter((workflow) => workflow.ativo));
+      setMateriais(listaMateriais.filter((material) => material.ativo));
       if (!novoTrabalhoDescricao && atual.itens[0]) {
         setNovoTrabalhoDescricao(atual.itens[0].descricao);
         setNovoTrabalhoQuantidade(String(atual.itens[0].quantidade));
@@ -209,7 +223,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         descricao: novoTrabalhoDescricao.trim(),
         quantidade,
         servicoId: null,
-        materialId: null,
+        materialId: novoTrabalhoMaterialId || null,
         acabamentos: null,
         prazo: novoTrabalhoPrazo ? new Date(novoTrabalhoPrazo).toISOString() : null,
         prioridade: novoTrabalhoPrioridade,
@@ -217,9 +231,14 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         observacoes: null,
         origem: pedido!.origem,
         workflowId: novoTrabalhoWorkflowId,
+        formato: novoTrabalhoFormato.trim() || null,
+        tipoEquipamentoNecessario: (novoTrabalhoTipoEquipamento as TipoEquipamento) || null,
       });
       showToast(`Trabalho ${trabalho.codigo} gerado.`, "success");
       setNovoTrabalhoWorkflowId("");
+      setNovoTrabalhoMaterialId("");
+      setNovoTrabalhoFormato("");
+      setNovoTrabalhoTipoEquipamento("");
       setNovoTrabalhoPrazo("");
       setNovoTrabalhoPrioridade("normal");
       await recarregar();
@@ -456,6 +475,55 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
                   value={novoTrabalhoPrazo}
                   onChange={(event) => setNovoTrabalhoPrazo(event.target.value)}
                 />
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-material" className="workspace-label">
+                  Material (opcional)
+                </label>
+                <select
+                  id="pedido-novo-trabalho-material"
+                  className="workspace-select"
+                  value={novoTrabalhoMaterialId}
+                  onChange={(event) => setNovoTrabalhoMaterialId(event.target.value)}
+                >
+                  <option value="">Nenhum</option>
+                  {materiais.map((material) => (
+                    <option key={material.id} value={material.id}>
+                      {material.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-formato" className="workspace-label">
+                  Formato (opcional)
+                </label>
+                <input
+                  id="pedido-novo-trabalho-formato"
+                  type="text"
+                  placeholder="Ex.: A3"
+                  className="workspace-input"
+                  value={novoTrabalhoFormato}
+                  onChange={(event) => setNovoTrabalhoFormato(event.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-tipo-equipamento" className="workspace-label">
+                  Equipamento necessário (opcional)
+                </label>
+                <select
+                  id="pedido-novo-trabalho-tipo-equipamento"
+                  className="workspace-select"
+                  value={novoTrabalhoTipoEquipamento}
+                  onChange={(event) => setNovoTrabalhoTipoEquipamento(event.target.value)}
+                >
+                  <option value="">Nenhum (workflow só humano)</option>
+                  {TIPOS_EQUIPAMENTO.map((tipo) => (
+                    <option key={tipo.value} value={tipo.value}>
+                      {tipo.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-end">
                 <button type="button" id="pedido-gerar-trabalho-botao" className="workspace-button-primary" onClick={() => void handleGerarTrabalho()}>

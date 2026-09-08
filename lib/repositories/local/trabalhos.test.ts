@@ -36,6 +36,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
     expect(trabalho1.codigo).toBe("TRAB-0001");
     expect(trabalho1.workflow.etapas).toHaveLength(3);
@@ -57,6 +59,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
     expect(trabalho2.codigo).toBe("TRAB-0002");
   });
@@ -79,6 +83,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
 
     // Cadastro do Workflow muda depois (nova etapa) — o Trabalho ja criado nao deve ser afetado.
@@ -108,6 +114,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
 
     await expect(repos.trabalhos.mover(trabalho.id, "usuario-1", etapa3.id)).rejects.toThrow(/pular etapas/i);
@@ -131,6 +139,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
     const [etapa1, etapa2] = trabalho.workflow.etapas;
 
@@ -161,6 +171,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
 
     await expect(repos.trabalhos.concluir(trabalho.id, "usuario-1")).rejects.toThrow(/ultima etapa/i);
@@ -198,6 +210,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
 
     await expect(repos.trabalhos.pausar(trabalho.id, "usuario-1", "")).rejects.toThrow(/motivo/i);
@@ -230,6 +244,8 @@ describe("TrabalhoRepository (SPEC 05)", () => {
       observacoes: null,
       origem: "balcao",
       workflowId: workflow.id,
+      formato: null,
+      tipoEquipamentoNecessario: null,
     });
     const atualizado = await repos.trabalhos.atribuirResponsavel(trabalho.id, "usuario-1", "usuario-x");
     expect(atualizado.prazo).toBe(prazoOriginal);

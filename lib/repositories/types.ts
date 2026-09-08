@@ -8,6 +8,8 @@
 // quando o adapter real fizer round-trip de rede.
 
 import type {
+  AlocacaoEquipamento,
+  AvaliacaoCompatibilidadeEquipamento,
   Caixa,
   CapacidadeEquipamento,
   CategoriaServico,
@@ -36,9 +38,11 @@ import type {
   PrioridadeTrabalho,
   Recebimento,
   Servico,
+  SituacaoEquipamento,
   Solicitacao,
   StatusEntregaPedido,
   Trabalho,
+  TipoEquipamento,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -114,7 +118,15 @@ export type MaterialRepository = CrudRepository<Material, Omit<Material, "id">>;
 export type ConversaoUnidadeRepository = CrudRepository<ConversaoUnidade, Omit<ConversaoUnidade, "id">> & {
   listarPorMaterial(materialId: string): Promise<ConversaoUnidade[]>;
 };
-export type EquipamentoRepository = CrudRepository<Equipamento, Omit<Equipamento, "id">>;
+export type EquipamentoRepository = CrudRepository<Equipamento, Omit<Equipamento, "id">> & {
+  /**
+   * SPEC 06: muda a situacao operacional (nao o cadastro `ativo`). Quando a
+   * nova situacao e "indisponivel"/"manutencao", qualquer AlocacaoEquipamento
+   * ativa deste equipamento e sinalizada (`precisaDecisaoHumana = true`) —
+   * nunca movida ou apagada silenciosamente.
+   */
+  atualizarSituacao(equipamentoId: string, usuarioId: string, novaSituacao: SituacaoEquipamento): Promise<Equipamento>;
+};
 export type CapacidadeEquipamentoRepository = CrudRepository<CapacidadeEquipamento, Omit<CapacidadeEquipamento, "id">> & {
   listarPorEquipamento(equipamentoId: string): Promise<CapacidadeEquipamento[]>;
 };
@@ -253,6 +265,8 @@ export type Repositories = {
   recebimentos: RecebimentoRepository;
 
   trabalhos: TrabalhoRepository;
+
+  alocacoesEquipamento: AlocacaoEquipamentoRepository;
 };
 
 // --- SPEC 05: Pedidos, Trabalhos e Kanban -----------------------------------
@@ -273,6 +287,10 @@ export type DadosNovoTrabalho = {
   origem: OrigemPedido;
   /** Id do workflow de cadastro a snapshotar — o repositorio copia nome/etapas na hora da criacao. */
   workflowId: string;
+  /** SPEC 06: formato exigido pela producao (ex.: "A3"). Null quando o workflow so tem etapas humanas. */
+  formato: string | null;
+  /** SPEC 06: categoria de equipamento exigida pelas etapas automatica/hibrida do workflow, se houver. */
+  tipoEquipamentoNecessario: TipoEquipamento | null;
 };
 
 export type TrabalhoRepository = {
@@ -295,4 +313,45 @@ export type TrabalhoRepository = {
   /** Volta a "em_producao" a partir de pausado ou com_pendencia. */
   retomar(trabalhoId: string, usuarioId: string): Promise<Trabalho>;
   cancelar(trabalhoId: string, usuarioId: string, motivo: string): Promise<Trabalho>;
+};
+
+// --- SPEC 06: Producao e Equipamentos ---------------------------------------
+
+export type DadosNovaAlocacaoEquipamento = {
+  empresaId: string;
+  trabalhoId: string;
+  etapaId: string;
+  equipamentoId: string;
+  operadorUsuarioId: string | null;
+  inicioPrevisto: string | null;
+};
+
+export type AlocacaoEquipamentoRepository = {
+  listar(empresaId: string): Promise<AlocacaoEquipamento[]>;
+  obter(id: string): Promise<AlocacaoEquipamento | null>;
+  listarPorTrabalho(trabalhoId: string): Promise<AlocacaoEquipamento[]>;
+  listarPorEquipamento(equipamentoId: string): Promise<AlocacaoEquipamento[]>;
+  /**
+   * Avalia, de forma deterministica (sem IA), quais equipamentos ativos sao
+   * compativeis com o Trabalho — formato, material e situacao do
+   * equipamento — e explica o motivo de cada incompatibilidade.
+   */
+  avaliarCompatibilidade(trabalhoId: string): Promise<AvaliacaoCompatibilidadeEquipamento[]>;
+  /**
+   * Cria a alocacao (situacao inicial "aguardando"). Bloqueia quando o
+   * equipamento e incompativel, esta indisponivel/manutencao, ou ja atingiu
+   * sua capacidadeSimultanea de alocacoes ativas.
+   */
+  criar(dados: DadosNovaAlocacaoEquipamento, usuarioId: string): Promise<AlocacaoEquipamento>;
+  iniciarPreparacao(alocacaoId: string, usuarioId: string): Promise<AlocacaoEquipamento>;
+  iniciar(alocacaoId: string, usuarioId: string): Promise<AlocacaoEquipamento>;
+  pausar(alocacaoId: string, usuarioId: string, motivo: string): Promise<AlocacaoEquipamento>;
+  retomar(alocacaoId: string, usuarioId: string): Promise<AlocacaoEquipamento>;
+  concluir(alocacaoId: string, usuarioId: string): Promise<AlocacaoEquipamento>;
+  /**
+   * Encerra a alocacao atual (situacao "cancelada", com motivoRealocacao) e
+   * cria uma nova em outro equipamento compativel, preservando o historico
+   * via alocacaoAnteriorId. Nunca move nem apaga a alocacao original.
+   */
+  realocar(alocacaoId: string, usuarioId: string, novoEquipamentoId: string, motivo: string): Promise<AlocacaoEquipamento>;
 };
