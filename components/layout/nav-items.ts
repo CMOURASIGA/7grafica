@@ -4,15 +4,15 @@ export type NavItem = {
   section: string;
   href: string;
   label: string;
-  icon: "home" | "settings" | "audit" | "cadastros" | "inbox" | "orcamento" | "pedido" | "pdv" | "caixa";
+  icon: "home" | "settings" | "audit" | "cadastros" | "inbox" | "orcamento" | "pedido" | "pdv" | "caixa" | "kanban";
   /** Quando definido, o item so aparece se o usuario tiver essa permissao na empresa ativa. */
   permissaoRequerida?: Permissao;
 };
 
 // Navegacao atual. SPEC 02 adicionou "Cadastros"; SPEC 03 adicionou
-// e-mail/orcamentos; SPEC 04 adiciona PDV e Caixa. Nenhum outro modulo de
-// negocio (kanban, estoque, financeiro, portal) entra aqui antes da
-// respectiva SPEC.
+// e-mail/orcamentos; SPEC 04 adicionou PDV e Caixa; SPEC 05 adiciona Kanban
+// (Trabalhos de producao). Nenhum outro modulo de negocio (estoque,
+// financeiro, portal) entra aqui antes da respectiva SPEC.
 export const NAV_ITEMS: NavItem[] = [
   { section: "Principal", href: "/", label: "Inicio", icon: "home" },
   { section: "Principal", href: "/cadastros", label: "Cadastros", icon: "cadastros" },
@@ -50,6 +50,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Caixa",
     icon: "caixa",
     permissaoRequerida: PERMISSOES.CAIXA_GERENCIAR,
+  },
+  {
+    section: "Producao",
+    href: "/kanban",
+    label: "Kanban",
+    icon: "kanban",
+    permissaoRequerida: PERMISSOES.PRODUCAO_CONSULTAR,
   },
   {
     section: "Sistema",

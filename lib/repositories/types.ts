@@ -30,12 +30,15 @@ import type {
   MovimentoCaixaManual,
   Orcamento,
   OrcamentoItem,
+  OrigemPedido,
   Papel,
   Pedido,
+  PrioridadeTrabalho,
   Recebimento,
   Servico,
   Solicitacao,
   StatusEntregaPedido,
+  Trabalho,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -248,4 +251,48 @@ export type Repositories = {
   caixa: CaixaRepository;
   movimentosCaixaManual: MovimentoCaixaManualRepository;
   recebimentos: RecebimentoRepository;
+
+  trabalhos: TrabalhoRepository;
+};
+
+// --- SPEC 05: Pedidos, Trabalhos e Kanban -----------------------------------
+
+export type DadosNovoTrabalho = {
+  empresaId: string;
+  pedidoId: string;
+  clienteId: string | null;
+  descricao: string;
+  quantidade: number;
+  servicoId: string | null;
+  materialId: string | null;
+  acabamentos: string | null;
+  prazo: string | null;
+  prioridade: PrioridadeTrabalho;
+  responsavelUsuarioId: string | null;
+  observacoes: string | null;
+  origem: OrigemPedido;
+  /** Id do workflow de cadastro a snapshotar — o repositorio copia nome/etapas na hora da criacao. */
+  workflowId: string;
+};
+
+export type TrabalhoRepository = {
+  listar(empresaId: string): Promise<Trabalho[]>;
+  obter(id: string): Promise<Trabalho | null>;
+  listarPorPedido(pedidoId: string): Promise<Trabalho[]>;
+  /** Cria com snapshot do Workflow/Etapas — nunca reaproveita snapshot de outro Trabalho. */
+  criar(dados: DadosNovoTrabalho): Promise<Trabalho>;
+  atribuirResponsavel(trabalhoId: string, usuarioId: string, responsavelUsuarioId: string | null): Promise<Trabalho>;
+  /**
+   * Move o Trabalho para a etapa `etapaId` do proprio snapshot. Avanco de
+   * uma etapa e livre; qualquer retrocesso exige `motivo`; pular etapas
+   * (avancar mais de uma posicao) e sempre bloqueado.
+   */
+  mover(trabalhoId: string, usuarioId: string, etapaId: string, motivo?: string): Promise<Trabalho>;
+  /** So permitido quando a etapa atual e a ultima do snapshot. */
+  concluir(trabalhoId: string, usuarioId: string): Promise<Trabalho>;
+  pausar(trabalhoId: string, usuarioId: string, motivo: string): Promise<Trabalho>;
+  registrarPendencia(trabalhoId: string, usuarioId: string, motivo: string): Promise<Trabalho>;
+  /** Volta a "em_producao" a partir de pausado ou com_pendencia. */
+  retomar(trabalhoId: string, usuarioId: string): Promise<Trabalho>;
+  cancelar(trabalhoId: string, usuarioId: string, motivo: string): Promise<Trabalho>;
 };

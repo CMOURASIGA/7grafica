@@ -10,11 +10,27 @@ import type { Repositories } from "@/lib/repositories/types";
  */
 export class PermissaoNegadaError extends Error {}
 
+type PermitirSeContexto = {
+  papel: Papel;
+  usuarioId: string | null;
+  metodo: string;
+  args: unknown[];
+  /** Bundle SEM protecao de RBAC — uso restrito a leituras auxiliares (ex.: checar dono do registro), nunca reexposto a UI. */
+  baseRepositories: Repositories;
+};
+
 type RegraAcesso = {
   /** Permissao exigida para criar/atualizar/remover. */
   gerenciar: Permissao;
   /** Permissao exigida para listar/obter/buscar. Sem isso, cai para `gerenciar` (quem gerencia tambem le). */
   visualizar?: Permissao;
+  /**
+   * Excecao pontual por registro (ex.: Operador so movimenta o Trabalho do
+   * qual e responsavel). So e consultada quando a checagem por papel acima
+   * falhou — nunca substitui a regra geral, apenas abre uma excecao estreita
+   * e auditavel.
+   */
+  permitirSe?: (contexto: PermitirSeContexto) => Promise<boolean> | boolean;
 };
 
 /**
@@ -58,6 +74,26 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
   caixa: { gerenciar: PERMISSOES.CAIXA_GERENCIAR, visualizar: PERMISSOES.PDV_OPERAR },
   movimentosCaixaManual: { gerenciar: PERMISSOES.CAIXA_GERENCIAR },
   recebimentos: { gerenciar: PERMISSOES.PDV_OPERAR },
+
+  // SPEC 05 — Pedidos, Trabalhos e Kanban. Gerar Trabalho, atribuir
+  // responsavel e cancelar sao exclusivos de PRODUCAO_GERENCIAR (admin/
+  // gerente). Todos os papeis leem (PRODUCAO_CONSULTAR). O Operador, que na
+  // matriz de papeis so tem consulta, ganha aqui uma excecao por registro:
+  // mover/concluir/pausar/retomar/registrarPendencia sao permitidos quando
+  // ele proprio e o responsavel pelo Trabalho.
+  trabalhos: {
+    gerenciar: PERMISSOES.PRODUCAO_GERENCIAR,
+    visualizar: PERMISSOES.PRODUCAO_CONSULTAR,
+    permitirSe: async ({ papel, usuarioId, metodo, args, baseRepositories }) => {
+      if (papel !== "operador" || !usuarioId) return false;
+      const METODOS_DO_RESPONSAVEL = new Set(["mover", "concluir", "pausar", "retomar", "registrarPendencia"]);
+      if (!METODOS_DO_RESPONSAVEL.has(metodo)) return false;
+      const trabalhoId = args[0];
+      if (typeof trabalhoId !== "string") return false;
+      const trabalho = await baseRepositories.trabalhos.obter(trabalhoId);
+      return trabalho?.responsavelUsuarioId === usuarioId;
+    },
+  },
 };
 
 /**
@@ -88,7 +124,14 @@ const METODOS_LEITURA = new Set([
   "obterResumo",
 ]);
 
-function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: RegraAcesso, papel: Papel | null): T {
+function protegerRepositorio<T extends object>(
+  nome: string,
+  alvo: T,
+  regra: RegraAcesso,
+  papel: Papel | null,
+  usuarioId: string | null,
+  baseRepositories: Repositories,
+): T {
   return new Proxy(alvo, {
     get(target, propriedade, receiver) {
       const original = Reflect.get(target, propriedade, receiver);
@@ -106,9 +149,15 @@ function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: Reg
         const permissaoNecessaria = ehEscrita ? regra.gerenciar : regra.visualizar ?? regra.gerenciar;
 
         if (!papel || !papelTemPermissao(papel, permissaoNecessaria)) {
-          throw new PermissaoNegadaError(
-            `Seu papel nao tem permissao para ${ehEscrita ? "alterar" : "visualizar"} ${nome}.`,
-          );
+          const excecaoConcedida =
+            papel && regra.permitirSe
+              ? await regra.permitirSe({ papel, usuarioId, metodo, args, baseRepositories })
+              : false;
+          if (!excecaoConcedida) {
+            throw new PermissaoNegadaError(
+              `Seu papel nao tem permissao para ${ehEscrita ? "alterar" : "visualizar"} ${nome}.`,
+            );
+          }
         }
 
         return (original as (...a: unknown[]) => unknown).apply(target, args);
@@ -122,14 +171,15 @@ function protegerRepositorio<T extends object>(nome: string, alvo: T, regra: Reg
  * Chame isto (via useRepositoriosAutorizados, em session-provider.tsx) em
  * vez de usar getRepositories() diretamente em qualquer tela que leia ou
  * escreva cadastros — assim a permissao e validada mesmo se a UI errar ao
- * esconder um botao.
+ * esconder um botao. `usuarioId` alimenta excecoes por registro (ver
+ * `permitirSe` em REGRAS, ex.: Operador dono do Trabalho).
  */
-export function protegerRepositories(base: Repositories, papel: Papel | null): Repositories {
+export function protegerRepositories(base: Repositories, papel: Papel | null, usuarioId: string | null = null): Repositories {
   const resultado = { ...base };
   (Object.keys(REGRAS) as Array<keyof Repositories>).forEach((chave) => {
     const regra = REGRAS[chave];
     if (!regra) return;
-    resultado[chave] = protegerRepositorio(String(chave), base[chave], regra, papel) as never;
+    resultado[chave] = protegerRepositorio(String(chave), base[chave], regra, papel, usuarioId, base) as never;
   });
   return resultado;
 }

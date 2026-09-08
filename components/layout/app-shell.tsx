@@ -26,7 +26,11 @@ export function AppShell({ children, identidade, email, papel, empresaNome }: Ap
   return (
     <div className="min-h-screen bg-(--bg-page) md:flex md:items-stretch">
       <Sidebar isMobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} identidade={identidade} papel={papel} />
-      <div className="flex min-h-screen flex-1 flex-col">
+      {/* min-w-0: sem isso, um filho com conteudo largo e nao-encolhivel (ex.:
+          o quadro do Kanban, que usa min-w por coluna) forca este item flex a
+          crescer pelo seu min-content, "roubando" espaco do Sidebar ate ele
+          colapsar para 0px — bug classico de flexbox (flexbug #1). */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Header
           onToggleMobileNav={() => setMobileNavOpen((prev) => !prev)}
           mobileNavOpen={mobileNavOpen}
@@ -34,7 +38,7 @@ export function AppShell({ children, identidade, email, papel, empresaNome }: Ap
           papel={papel}
           empresaNome={empresaNome}
         />
-        <main className="flex-1 overflow-x-hidden p-4 md:p-5">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-5">{children}</main>
       </div>
     </div>
   );

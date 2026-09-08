@@ -70,6 +70,13 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
       <rect x="13" y="13" width="7" height="7" rx="1.2" />
     </>
   ),
+  kanban: (
+    <>
+      <rect x="3" y="4" width="5" height="16" rx="1.2" />
+      <rect x="9.5" y="4" width="5" height="10" rx="1.2" />
+      <rect x="16" y="4" width="5" height="13" rx="1.2" />
+    </>
+  ),
 };
 
 function NavIcon({ name }: { name: IconName }) {

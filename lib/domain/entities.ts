@@ -372,3 +372,66 @@ export type Recebimento = {
   registradoPorUsuarioId: string;
   registradoEm: string;
 };
+
+// --- SPEC 05: Pedidos, Trabalhos e Kanban ----------------------------------
+//
+// Regra de dominio (registrada aqui por decisao de produto): situacao
+// financeira e situacao operacional sao independentes. Um Pedido pode ter
+// Trabalhos em producao mesmo com saldo pendente (ver Recebimento acima) —
+// nao existe regra automatica "saldo = 0 -> libera producao". Uma politica
+// de bloqueio, se vier a existir, sera parametrizavel numa spec futura.
+//
+// Pedido e comercial; Trabalho e operacional. Um Pedido pode gerar um ou
+// varios Trabalhos, e a decomposicao NAO assume 1 item = 1 trabalho — quem
+// atende decide como agrupar/dividir a necessidade real de producao.
+
+export type StatusTrabalho = "aguardando_producao" | "em_producao" | "pausado" | "com_pendencia" | "concluido" | "cancelado";
+
+export type PrioridadeTrabalho = "normal" | "alta" | "urgente";
+
+/**
+ * Copia congelada de uma etapa de workflow no momento em que o Trabalho e
+ * criado. Nunca e resolvida de volta ao cadastro vivo — se alguem editar o
+ * Workflow ou a Etapa original depois, este snapshot permanece intacto.
+ */
+export type EtapaSnapshot = {
+  id: string;
+  ordem: number;
+  nome: string;
+  tipo: TipoEtapa;
+};
+
+export type WorkflowSnapshot = {
+  /** Id do workflow de cadastro na hora do snapshot — so informativo, nunca redereferenciado. */
+  workflowId: string;
+  nome: string;
+  etapas: EtapaSnapshot[];
+};
+
+export type Trabalho = {
+  id: string;
+  empresaId: string;
+  /** Unico por empresa, formato TRAB-0001. */
+  codigo: string;
+  pedidoId: string;
+  /** Snapshot do cliente do pedido no momento da criacao (null = consumidor nao identificado). */
+  clienteId: string | null;
+  /** Copiados do item de origem no Pedido — congelados, nao voltam a resolver o cadastro de servico/material. */
+  descricao: string;
+  quantidade: number;
+  servicoId: string | null;
+  materialId: string | null;
+  acabamentos: string | null;
+  prazo: string | null;
+  prioridade: PrioridadeTrabalho;
+  situacao: StatusTrabalho;
+  responsavelUsuarioId: string | null;
+  observacoes: string | null;
+  /** Metadado de procedencia do Pedido — "email" e "balcao" nunca tem implementacao de producao diferente. */
+  origem: OrigemPedido;
+  workflow: WorkflowSnapshot;
+  /** Aponta para um id dentro de workflow.etapas — nunca para o cadastro vivo. */
+  etapaAtualId: string;
+  criadoEm: string;
+  concluidoEm: string | null;
+};

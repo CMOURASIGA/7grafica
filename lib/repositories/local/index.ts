@@ -29,6 +29,7 @@ import { criarPedidoRepositoryLocal } from "@/lib/repositories/local/pedidos";
 import { criarCaixaRepositoryLocal } from "@/lib/repositories/local/caixa";
 import { criarMovimentoCaixaRepositoryLocal } from "@/lib/repositories/local/movimentos-caixa";
 import { criarRecebimentoRepositoryLocal } from "@/lib/repositories/local/recebimentos";
+import { criarTrabalhoRepositoryLocal } from "@/lib/repositories/local/trabalhos";
 
 /**
  * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
@@ -68,5 +69,7 @@ export function criarRepositoriesLocal(): Repositories {
     caixa: criarCaixaRepositoryLocal(),
     movimentosCaixaManual: criarMovimentoCaixaRepositoryLocal(),
     recebimentos: criarRecebimentoRepositoryLocal(),
+
+    trabalhos: criarTrabalhoRepositoryLocal(),
   };
 }

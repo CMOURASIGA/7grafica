@@ -6,7 +6,7 @@ import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/u
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
 import { papelTemPermissao, PERMISSOES } from "@/lib/rbac";
-import type { Cliente, EventoAuditoria, FormaPagamento, Pedido, Recebimento } from "@/lib/domain/entities";
+import type { Cliente, EventoAuditoria, FormaPagamento, Pedido, PrioridadeTrabalho, Recebimento, Trabalho, Workflow } from "@/lib/domain/entities";
 
 const ORIGEM_LABEL: Record<Pedido["origem"], string> = { email: "E-mail / Orçamento", balcao: "Balcão" };
 const STATUS_ENTREGA_LABEL: Record<Pedido["statusEntrega"], string> = {
@@ -14,6 +14,15 @@ const STATUS_ENTREGA_LABEL: Record<Pedido["statusEntrega"], string> = {
   concluido: "Concluído",
   cancelado: "Cancelado",
 };
+const SITUACAO_TRABALHO_LABEL: Record<Trabalho["situacao"], string> = {
+  aguardando_producao: "Aguardando produção",
+  em_producao: "Em produção",
+  pausado: "Pausado",
+  com_pendencia: "Com pendência",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+};
+const SITUACOES_FINALIZADAS: Trabalho["situacao"][] = ["concluido", "cancelado"];
 
 export default function PedidoDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -23,6 +32,8 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const papel = sessao?.empresaAtiva?.papel ?? null;
   const podeAcessar = papel ? papelTemPermissao(papel, PERMISSOES.SOLICITACOES_GERENCIAR) : false;
   const podeOperarCaixa = papel ? papelTemPermissao(papel, PERMISSOES.PDV_OPERAR) : false;
+  const podeGerarTrabalho = papel ? papelTemPermissao(papel, PERMISSOES.PRODUCAO_GERENCIAR) : false;
+  const podeVerProducao = papel ? papelTemPermissao(papel, PERMISSOES.PRODUCAO_CONSULTAR) : false;
 
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -30,11 +41,19 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [eventos, setEventos] = useState<EventoAuditoria[]>([]);
   const [caixaAbertoId, setCaixaAbertoId] = useState<string | null>(null);
+  const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const [formaPagamentoId, setFormaPagamentoId] = useState("");
   const [valorPagamento, setValorPagamento] = useState("");
   const [valorEntregueDinheiro, setValorEntregueDinheiro] = useState("");
+
+  const [novoTrabalhoDescricao, setNovoTrabalhoDescricao] = useState("");
+  const [novoTrabalhoQuantidade, setNovoTrabalhoQuantidade] = useState("1");
+  const [novoTrabalhoWorkflowId, setNovoTrabalhoWorkflowId] = useState("");
+  const [novoTrabalhoPrazo, setNovoTrabalhoPrazo] = useState("");
+  const [novoTrabalhoPrioridade, setNovoTrabalhoPrioridade] = useState<PrioridadeTrabalho>("normal");
 
   async function recarregar() {
     if (!podeAcessar) {
@@ -44,18 +63,26 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
     const atual = await repositories.pedidos.obter(id);
     setPedido(atual);
     if (atual) {
-      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto] = await Promise.all([
+      const [clienteAtual, listaRecebimentos, listaFormas, listaEventos, caixaAberto, listaTrabalhos, listaWorkflows] = await Promise.all([
         atual.clienteId ? repositories.clientes.obter(atual.clienteId) : Promise.resolve(null),
         repositories.recebimentos.listarPorPedido(atual.id),
         repositories.formasPagamento.listar(atual.empresaId),
         repositories.auditoria.listar(atual.empresaId, 200),
         repositories.caixa.obterAberto(atual.empresaId).catch(() => null),
+        podeVerProducao ? repositories.trabalhos.listarPorPedido(atual.id) : Promise.resolve([]),
+        podeGerarTrabalho ? repositories.workflows.listar(atual.empresaId) : Promise.resolve([]),
       ]);
       setCliente(clienteAtual);
       setRecebimentos(listaRecebimentos);
       setFormasPagamento(listaFormas.filter((forma) => forma.ativo));
       setEventos(listaEventos.filter((evento) => evento.entidade === "pedidos" && evento.entidadeId === atual.id));
       setCaixaAbertoId(caixaAberto?.id ?? null);
+      setTrabalhos(listaTrabalhos);
+      setWorkflows(listaWorkflows.filter((workflow) => workflow.ativo));
+      if (!novoTrabalhoDescricao && atual.itens[0]) {
+        setNovoTrabalhoDescricao(atual.itens[0].descricao);
+        setNovoTrabalhoQuantidade(String(atual.itens[0].quantidade));
+      }
     }
     setCarregando(false);
   }
@@ -63,10 +90,16 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     void recarregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, podeAcessar]);
+  }, [id, podeAcessar, podeVerProducao, podeGerarTrabalho]);
 
   const valorRecebido = useMemo(() => recebimentos.reduce((soma, item) => soma + item.valor, 0), [recebimentos]);
   const saldoPendente = pedido ? Math.max(0, pedido.valorTotal - valorRecebido) : 0;
+
+  // Conclusao operacional e SEMPRE derivada, nunca persistida no Pedido: o
+  // status comercial (statusEntrega) e o financeiro (recebimentos) sao
+  // dimensoes independentes desta. So considerada quando ha ao menos um
+  // Trabalho gerado.
+  const producaoConcluida = trabalhos.length > 0 && trabalhos.every((trabalho) => SITUACOES_FINALIZADAS.includes(trabalho.situacao));
 
   if (carregando) return null;
 
@@ -154,6 +187,47 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handleGerarTrabalho() {
+    if (!novoTrabalhoWorkflowId) {
+      showToast("Selecione o workflow de producao.", "error");
+      return;
+    }
+    if (!novoTrabalhoDescricao.trim()) {
+      showToast("Descreva o que sera produzido.", "error");
+      return;
+    }
+    const quantidade = Number(novoTrabalhoQuantidade) || 0;
+    if (quantidade <= 0) {
+      showToast("Informe uma quantidade valida.", "error");
+      return;
+    }
+    try {
+      const trabalho = await repositories.trabalhos.criar({
+        empresaId: pedido!.empresaId,
+        pedidoId: pedido!.id,
+        clienteId: pedido!.clienteId,
+        descricao: novoTrabalhoDescricao.trim(),
+        quantidade,
+        servicoId: null,
+        materialId: null,
+        acabamentos: null,
+        prazo: novoTrabalhoPrazo ? new Date(novoTrabalhoPrazo).toISOString() : null,
+        prioridade: novoTrabalhoPrioridade,
+        responsavelUsuarioId: null,
+        observacoes: null,
+        origem: pedido!.origem,
+        workflowId: novoTrabalhoWorkflowId,
+      });
+      showToast(`Trabalho ${trabalho.codigo} gerado.`, "success");
+      setNovoTrabalhoWorkflowId("");
+      setNovoTrabalhoPrazo("");
+      setNovoTrabalhoPrioridade("normal");
+      await recarregar();
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Falha ao gerar trabalho.", "error");
+    }
+  }
+
   function nomeForma(formaPagamentoId: string) {
     return formasPagamento.find((forma) => forma.id === formaPagamentoId)?.nome ?? "—";
   }
@@ -164,7 +238,14 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         eyebrow={`Pedido ${pedido.numero} — ${ORIGEM_LABEL[pedido.origem]}`}
         title={cliente?.nome ?? "Consumidor não identificado"}
         description={`Criado em ${new Date(pedido.criadoEm).toLocaleString("pt-BR")}`}
-        aside={<StatusPill tone={pedido.statusEntrega === "concluido" ? "success" : "warning"}>{STATUS_ENTREGA_LABEL[pedido.statusEntrega]}</StatusPill>}
+        aside={
+          <>
+            <StatusPill tone={pedido.statusEntrega === "concluido" ? "success" : "warning"}>{STATUS_ENTREGA_LABEL[pedido.statusEntrega]}</StatusPill>
+            {podeVerProducao && trabalhos.length > 0 ? (
+              <StatusPill tone={producaoConcluida ? "success" : "accent"}>{producaoConcluida ? "Produção concluída" : "Produção em andamento"}</StatusPill>
+            ) : null}
+          </>
+        }
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href="/pedidos" className="text-xs font-medium text-(--accent-strong) hover:underline">
@@ -274,6 +355,117 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
           </div>
         ) : null}
       </SurfaceCard>
+
+      {podeVerProducao ? (
+        <SurfaceCard className="p-5">
+          <SectionLabel>Trabalhos (produção)</SectionLabel>
+          <p className="mt-1 text-xs text-(--text-tertiary)">
+            Um Pedido pode gerar um ou vários Trabalhos — a decomposição não assume 1 item = 1 trabalho.
+          </p>
+
+          {trabalhos.length === 0 ? (
+            <p className="mt-3 workspace-empty-state">Nenhum Trabalho gerado ainda para este pedido.</p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2">
+              {trabalhos.map((trabalho) => (
+                <li key={trabalho.id}>
+                  <Link
+                    href={`/trabalhos/${trabalho.id}`}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-(--border) px-4 py-3 text-sm hover:bg-(--bg-muted)"
+                  >
+                    <span className="font-medium text-(--text-primary)">
+                      {trabalho.codigo} — {trabalho.descricao}
+                    </span>
+                    <StatusPill tone={SITUACOES_FINALIZADAS.includes(trabalho.situacao) ? "success" : "accent"}>
+                      {SITUACAO_TRABALHO_LABEL[trabalho.situacao]}
+                    </StatusPill>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {podeGerarTrabalho && pedido.statusEntrega !== "cancelado" ? (
+            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-(--border) bg-(--bg-muted) p-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label htmlFor="pedido-novo-trabalho-descricao" className="workspace-label">
+                  O que será produzido
+                </label>
+                <input
+                  id="pedido-novo-trabalho-descricao"
+                  type="text"
+                  className="workspace-input"
+                  value={novoTrabalhoDescricao}
+                  onChange={(event) => setNovoTrabalhoDescricao(event.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-quantidade" className="workspace-label">
+                  Quantidade
+                </label>
+                <input
+                  id="pedido-novo-trabalho-quantidade"
+                  type="number"
+                  min={1}
+                  className="workspace-input"
+                  value={novoTrabalhoQuantidade}
+                  onChange={(event) => setNovoTrabalhoQuantidade(event.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-workflow" className="workspace-label">
+                  Workflow
+                </label>
+                <select
+                  id="pedido-novo-trabalho-workflow"
+                  className="workspace-select"
+                  value={novoTrabalhoWorkflowId}
+                  onChange={(event) => setNovoTrabalhoWorkflowId(event.target.value)}
+                >
+                  <option value="">Selecione...</option>
+                  {workflows.map((workflow) => (
+                    <option key={workflow.id} value={workflow.id}>
+                      {workflow.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-prioridade" className="workspace-label">
+                  Prioridade
+                </label>
+                <select
+                  id="pedido-novo-trabalho-prioridade"
+                  className="workspace-select"
+                  value={novoTrabalhoPrioridade}
+                  onChange={(event) => setNovoTrabalhoPrioridade(event.target.value as PrioridadeTrabalho)}
+                >
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="pedido-novo-trabalho-prazo" className="workspace-label">
+                  Prazo (opcional)
+                </label>
+                <input
+                  id="pedido-novo-trabalho-prazo"
+                  type="date"
+                  className="workspace-input"
+                  value={novoTrabalhoPrazo}
+                  onChange={(event) => setNovoTrabalhoPrazo(event.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <button type="button" id="pedido-gerar-trabalho-botao" className="workspace-button-primary" onClick={() => void handleGerarTrabalho()}>
+                  Gerar Trabalho
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </SurfaceCard>
+      ) : null}
 
       <SurfaceCard className="p-5">
         <SectionLabel>Histórico</SectionLabel>

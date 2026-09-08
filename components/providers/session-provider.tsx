@@ -74,5 +74,6 @@ export function useSessao(): SessionContextValue {
 export function useRepositoriosAutorizados(): Repositories {
   const { sessao } = useSessao();
   const papel = sessao?.empresaAtiva?.papel ?? null;
-  return useMemo(() => protegerRepositories(getRepositories(), papel), [papel]);
+  const usuarioId = sessao?.usuario.id ?? null;
+  return useMemo(() => protegerRepositories(getRepositories(), papel, usuarioId), [papel, usuarioId]);
 }

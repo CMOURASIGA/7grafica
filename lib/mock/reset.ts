@@ -22,6 +22,7 @@ import {
   pedidosSeed,
   servicosSeed,
   solicitacoesSeed,
+  trabalhosSeed,
   unidadesMedidaSeed,
   usuariosPerfilSeed,
   workflowsSeed,
@@ -62,13 +63,15 @@ export function restaurarDadosDemo(): void {
   gravarColecao("orcamentos", orcamentosSeed);
   gravarColecao("emails_enviados", emailsEnviadosSeed);
   gravarColecao("pedidos", pedidosSeed);
+
+  gravarColecao("trabalhos", trabalhosSeed);
 }
 
-// v3: SPEC 04 mudou o formato de Pedido (origem, itens, statusEntrega,
-// tokenAcompanhamento) e adicionou Caixa/Recebimento — incrementado para
-// que sessoes com bootstrap anterior recebam o novo formato automaticamente
-// em vez de quebrar ao ler um Pedido no formato antigo.
-const CHAVE_BOOTSTRAP = "bootstrap_v3";
+// v4: SPEC 05 introduziu Trabalho (com snapshot de Workflow/Etapas) — sem um
+// Trabalho seedado a sessao ficaria sem dado nenhum para validar o Kanban.
+// Incrementado para forcar reseed automatico em navegadores com bootstrap
+// anterior.
+const CHAVE_BOOTSTRAP = "bootstrap_v4";
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {

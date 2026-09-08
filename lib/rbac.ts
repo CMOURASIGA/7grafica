@@ -31,6 +31,12 @@ export const PERMISSOES = {
   PDV_OPERAR: "pdv_operar",
   /** Abrir/fechar caixa e lancar entradas/saidas manuais autorizadas — nao inclui recebimentos do PDV (ver PDV_OPERAR). */
   CAIXA_GERENCIAR: "caixa_gerenciar",
+
+  // SPEC 05 — Pedidos, Trabalhos e Kanban.
+  /** Gerar Trabalhos, atribuir responsavel, mover/pausar/retomar/cancelar qualquer Trabalho da empresa. */
+  PRODUCAO_GERENCIAR: "producao_gerenciar",
+  /** Ler Trabalhos/Kanban. Operador tambem executa transicoes, mas so nos Trabalhos em que e responsavel (ver lib/repositories/authorization.ts). */
+  PRODUCAO_CONSULTAR: "producao_consultar",
 } as const;
 
 export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
@@ -60,6 +66,17 @@ export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
  *   abre/fecha caixa nem lanca movimentos manuais.
  * - Operador: nao opera caixa nem altera recebimentos (sem PDV_OPERAR nem
  *   CAIXA_GERENCIAR).
+ *
+ * Matriz de Producao/Kanban (SPEC 05):
+ * - Admin/Gerente: PRODUCAO_GERENCIAR — gera Trabalho a partir de Pedido,
+ *   atribui responsavel, move/pausa/retoma/cancela qualquer Trabalho.
+ * - Atendente: so PRODUCAO_CONSULTAR — acompanha Pedido/Trabalho/Kanban,
+ *   nunca movimenta producao.
+ * - Operador: so PRODUCAO_CONSULTAR na matriz de papeis, mas o proxy de
+ *   autorizacao (lib/repositories/authorization.ts) concede uma excecao
+ *   pontual: mover/concluir/pausar/retomar/registrarPendencia sao permitidos
+ *   quando o Trabalho alvo tem esse Operador como responsavel. Atribuir
+ *   responsavel e cancelar continuam exclusivos de PRODUCAO_GERENCIAR.
  */
 export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
   admin: [
@@ -75,6 +92,8 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.SOLICITACOES_GERENCIAR,
     PERMISSOES.PDV_OPERAR,
     PERMISSOES.CAIXA_GERENCIAR,
+    PERMISSOES.PRODUCAO_GERENCIAR,
+    PERMISSOES.PRODUCAO_CONSULTAR,
   ],
   gerente: [
     PERMISSOES.GERENCIAR_USUARIOS,
@@ -86,6 +105,8 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.SOLICITACOES_GERENCIAR,
     PERMISSOES.PDV_OPERAR,
     PERMISSOES.CAIXA_GERENCIAR,
+    PERMISSOES.PRODUCAO_GERENCIAR,
+    PERMISSOES.PRODUCAO_CONSULTAR,
   ],
   atendente: [
     PERMISSOES.CLIENTES_GERENCIAR,
@@ -93,8 +114,9 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR,
     PERMISSOES.SOLICITACOES_GERENCIAR,
     PERMISSOES.PDV_OPERAR,
+    PERMISSOES.PRODUCAO_CONSULTAR,
   ],
-  operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR],
+  operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR, PERMISSOES.PRODUCAO_CONSULTAR],
 };
 
 export function papelTemPermissao(papel: Papel, permissao: Permissao): boolean {

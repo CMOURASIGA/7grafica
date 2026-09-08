@@ -207,3 +207,93 @@ describe("RBAC de Balcao/PDV/Caixa (SPEC 04) — repositorio", () => {
     await expect(repos.recebimentos.listarPorPedido("pedido-qualquer")).rejects.toBeInstanceOf(PermissaoNegadaError);
   });
 });
+
+describe("RBAC de Producao/Kanban (SPEC 05) — repositorio", () => {
+  beforeEach(() => {
+    limparNamespace();
+  });
+
+  async function prepararTrabalho(papelCriador: "admin" | "gerente", responsavelUsuarioId: string | null) {
+    const base = criarRepositoriesLocal();
+    const workflow = await base.workflows.criar({ empresaId: EMPRESA_ID, nome: "Workflow teste", categoriaServicoId: null, ativo: true });
+    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 1, nome: "Etapa 1", tipo: "humana" });
+    await base.etapasWorkflow.criar({ empresaId: EMPRESA_ID, workflowId: workflow.id, ordem: 2, nome: "Etapa 2", tipo: "humana" });
+    const repos = protegerRepositories(base, papelCriador, "usuario-criador");
+    const trabalho = await repos.trabalhos.criar({
+      empresaId: EMPRESA_ID,
+      pedidoId: "pedido-qualquer",
+      clienteId: null,
+      descricao: "Teste",
+      quantidade: 1,
+      servicoId: null,
+      materialId: null,
+      acabamentos: null,
+      prazo: null,
+      prioridade: "normal",
+      responsavelUsuarioId,
+      observacoes: null,
+      origem: "balcao",
+      workflowId: workflow.id,
+    });
+    return { base, trabalho };
+  }
+
+  it("Admin/Gerente: PRODUCAO_GERENCIAR — gera Trabalho, atribui responsavel e move qualquer Trabalho", async () => {
+    const { base, trabalho } = await prepararTrabalho("admin", null);
+    const repos = protegerRepositories(base, "gerente", "usuario-gerente");
+    await expect(repos.trabalhos.atribuirResponsavel(trabalho.id, "usuario-gerente", "usuario-x")).resolves.toMatchObject({
+      responsavelUsuarioId: "usuario-x",
+    });
+    await expect(repos.trabalhos.mover(trabalho.id, "usuario-gerente", trabalho.workflow.etapas[1].id)).resolves.toMatchObject({
+      etapaAtualId: trabalho.workflow.etapas[1].id,
+    });
+  });
+
+  it("Atendente: so consulta — nao pode mover nem gerar Trabalho", async () => {
+    const { base, trabalho } = await prepararTrabalho("admin", null);
+    const repos = protegerRepositories(base, "atendente", "usuario-atendente");
+    await expect(repos.trabalhos.listar(EMPRESA_ID)).resolves.not.toThrow;
+    await expect(repos.trabalhos.mover(trabalho.id, "usuario-atendente", trabalho.workflow.etapas[1].id)).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(
+      repos.trabalhos.criar({
+        empresaId: EMPRESA_ID,
+        pedidoId: "pedido-x",
+        clienteId: null,
+        descricao: "x",
+        quantidade: 1,
+        servicoId: null,
+        materialId: null,
+        acabamentos: null,
+        prazo: null,
+        prioridade: "normal",
+        responsavelUsuarioId: null,
+        observacoes: null,
+        origem: "balcao",
+        workflowId: trabalho.workflow.workflowId,
+      }),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+  });
+
+  it("Operador: consulta qualquer Trabalho, mas so movimenta o Trabalho do qual e responsavel", async () => {
+    const { base, trabalho } = await prepararTrabalho("admin", "usuario-operador-dono");
+
+    const repoDono = protegerRepositories(base, "operador", "usuario-operador-dono");
+    await expect(repoDono.trabalhos.mover(trabalho.id, "usuario-operador-dono", trabalho.workflow.etapas[1].id)).resolves.toMatchObject({
+      etapaAtualId: trabalho.workflow.etapas[1].id,
+    });
+
+    const { trabalho: trabalhoDeOutro } = await prepararTrabalho("admin", "usuario-outro-operador");
+    const repoNaoResponsavel = protegerRepositories(base, "operador", "usuario-operador-dono");
+    await expect(
+      repoNaoResponsavel.trabalhos.mover(trabalhoDeOutro.id, "usuario-operador-dono", trabalhoDeOutro.workflow.etapas[1].id),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+
+    // Atribuir responsavel e cancelar continuam exclusivos de PRODUCAO_GERENCIAR, mesmo para o dono.
+    await expect(
+      repoDono.trabalhos.atribuirResponsavel(trabalho.id, "usuario-operador-dono", "usuario-outro"),
+    ).rejects.toBeInstanceOf(PermissaoNegadaError);
+    await expect(repoDono.trabalhos.cancelar(trabalho.id, "usuario-operador-dono", "motivo qualquer")).rejects.toBeInstanceOf(
+      PermissaoNegadaError,
+    );
+  });
+});

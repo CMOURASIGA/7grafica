@@ -18,6 +18,7 @@ import type {
   Pedido,
   Servico,
   Solicitacao,
+  Trabalho,
   UnidadeMedida,
   UsuarioPerfil,
   Workflow,
@@ -311,6 +312,48 @@ export const pedidosSeed: Pedido[] = [
     statusEntrega: "aguardando_producao",
     tokenAcompanhamento: "demo-token-pedido-0001",
     criadoEm: "2026-02-19T08:31:00.000Z",
+    concluidoEm: null,
+  },
+];
+
+// --- SPEC 05: Pedidos, Trabalhos e Kanban ----------------------------------
+//
+// Continua o MESMO Pedido (pedido-1/PED-0001) ja seedado acima — o Trabalho
+// abaixo prova a cadeia completa e-mail -> orcamento -> pedido -> producao
+// sem massa independente. Workflow/etapas snapshotados sao copia do
+// workflow-1/etapas-1-* seedados acima, na etapa "Impressao" (indice 2 de 5),
+// para demonstrar um Trabalho ja em producao, responsavel atribuido, com o
+// Pedido ainda sem recebimento (situacao financeira e operacional
+// independentes, por decisao de dominio).
+
+export const trabalhosSeed: Trabalho[] = [
+  {
+    id: "trabalho-1",
+    empresaId: EMPRESA_DEMO_ID,
+    codigo: "TRAB-0001",
+    pedidoId: "pedido-1",
+    clienteId: "cliente-1",
+    descricao: "Cartao de visita 300g, verniz localizado",
+    quantidade: 200,
+    servicoId: "servico-1",
+    materialId: "material-1",
+    acabamentos: "Verniz localizado frente",
+    prazo: "2026-02-24T18:00:00.000Z",
+    prioridade: "normal",
+    situacao: "em_producao",
+    responsavelUsuarioId: "usuario-operador",
+    observacoes: null,
+    origem: "email",
+    workflow: {
+      workflowId: "workflow-1",
+      nome: "Impressao digital padrao",
+      etapas: etapasWorkflowSeed
+        .filter((etapa) => etapa.workflowId === "workflow-1")
+        .sort((a, b) => a.ordem - b.ordem)
+        .map((etapa) => ({ id: etapa.id, ordem: etapa.ordem, nome: etapa.nome, tipo: etapa.tipo })),
+    },
+    etapaAtualId: "etapa-1-3",
+    criadoEm: "2026-02-20T09:00:00.000Z",
     concluidoEm: null,
   },
 ];
