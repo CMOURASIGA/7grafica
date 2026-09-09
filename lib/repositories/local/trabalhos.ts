@@ -1,5 +1,7 @@
+import { motivoArquivoInvalido } from "@/lib/domain/liberacao-arquivo";
+import { exigirArquivoDaEtapa } from "./validar-arquivo-etapa";
 import { gerarId, gravarColecao, lerColecao } from "@/lib/storage/local-storage-client";
-import type { Arquivo, EtapaWorkflow, EventoAuditoria, Trabalho, Workflow } from "@/lib/domain/entities";
+import type { Arquivo, Servico, EtapaWorkflow, EventoAuditoria, Trabalho, Workflow } from "@/lib/domain/entities";
 import type { TrabalhoRepository } from "@/lib/repositories/types";
 
 const CHAVE = "trabalhos";
@@ -100,6 +102,7 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
         formato: dados.formato,
         tipoEquipamentoNecessario: dados.tipoEquipamentoNecessario,
         arquivoLiberadoId: null,
+        requisitoArquivo: lerColecao<Servico>("servicos").find((item) => item.id === dados.servicoId)?.requisitoArquivo ?? null,
         criadoEm: new Date().toISOString(),
         concluidoEm: null,
       };
@@ -157,11 +160,8 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
         throw new Error("Retroceder de etapa exige justificativa.");
       }
       const etapaDestino = etapas[indiceDestino];
-      if (avancando && etapaDestino.exigeArquivoLiberado && !trabalho.arquivoLiberadoId) {
-        throw new Error(
-          `Nao e possivel entrar na etapa "${etapaDestino.nome}": nenhum arquivo foi explicitamente liberado para producao neste Trabalho.`,
-        );
-      }
+      if (avancando) exigirArquivoDaEtapa(trabalho, trabalho.etapaAtualId, usuarioId);
+      exigirArquivoDaEtapa(trabalho, etapaDestino.id, usuarioId);
 
       const etapaAnterior = etapas[indiceAtual];
       const etapaNova = etapas[indiceDestino];
@@ -189,6 +189,7 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
       if (trabalho.etapaAtualId !== ultimaEtapa.id) {
         throw new Error("So e possivel concluir o Trabalho quando ele estiver na ultima etapa do workflow.");
       }
+      exigirArquivoDaEtapa(trabalho, trabalho.etapaAtualId, usuarioId);
       const atualizado = salvar({ ...trabalho, situacao: "concluido", concluidoEm: new Date().toISOString() });
       registrarEvento({
         empresaId: atualizado.empresaId,
@@ -238,6 +239,7 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
       if (trabalho.situacao !== "pausado" && trabalho.situacao !== "com_pendencia") {
         throw new Error(`So e possivel retomar um Trabalho pausado ou com pendencia (situacao atual: "${trabalho.situacao}").`);
       }
+      exigirArquivoDaEtapa(trabalho, trabalho.etapaAtualId, usuarioId);
       const atualizado = salvar({ ...trabalho, situacao: "em_producao" });
       registrarEvento({
         empresaId: atualizado.empresaId,
@@ -272,15 +274,9 @@ export function criarTrabalhoRepositoryLocal(): TrabalhoRepository {
       const trabalho = obterOuFalhar(trabalhoId);
       const arquivo = lerColecao<Arquivo>(CHAVE_ARQUIVOS).find((item) => item.id === arquivoId);
       if (!arquivo) throw new Error(`Arquivo ${arquivoId} nao encontrado.`);
-      if (arquivo.trabalhoId !== trabalhoId) {
-        throw new Error("Este arquivo nao pertence a este Trabalho.");
-      }
-      if (arquivo.statusAprovacaoTecnica !== "aprovado") {
-        throw new Error("So e possivel liberar para producao um arquivo com aprovacao tecnica.");
-      }
-      if (arquivo.tipo === "arte" && arquivo.situacao !== "aprovado_cliente") {
-        throw new Error("Arquivos de arte exigem tambem a aprovacao do cliente antes de serem liberados para producao.");
-      }
+      if (trabalho.situacao === "concluido" || trabalho.situacao === "cancelado") throw new Error("Trabalho finalizado não permite substituir o arquivo de produção.");
+      const motivo = motivoArquivoInvalido(trabalho, arquivo);
+      if (motivo) throw new Error(motivo);
       const anterior = trabalho.arquivoLiberadoId;
       const atualizado = salvar({ ...trabalho, arquivoLiberadoId: arquivoId });
       registrarEvento({

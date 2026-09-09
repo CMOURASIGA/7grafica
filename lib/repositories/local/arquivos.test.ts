@@ -174,3 +174,50 @@ describe("ArquivoRepository (SPEC 07)", () => {
     await expect(repos.trabalhos.mover(trabalho.id, "usuario-gerente", trabalho.workflow.etapas[1].id)).rejects.toThrow(/liberado/i);
   });
 });
+
+
+describe("SPEC 07: proteção contra regressões de versão", () => {
+  beforeEach(() => limparNamespace());
+  async function preparar() {
+    const repos = criarRepositoriesLocal();
+    const { trabalho } = await prepararTrabalhoComRequisito(repos, true);
+    const arquivo = await repos.arquivos.receber({ empresaId: EMPRESA_ID, solicitacaoId: null, pedidoId: "pedido-1", trabalhoId: trabalho.id, tipo: "cliente", origem: "email", enviadoPorUsuarioId: null, ...METADADOS_OK }, null);
+    await repos.arquivos.aprovarTecnicamente(arquivo.id, "gerente", null);
+    await repos.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "gerente");
+    return { repos, trabalho, arquivo };
+  }
+  it("nova versão suspende uso da anterior e impede reaprovar/reliberar V1", async () => {
+    const { repos, trabalho, arquivo } = await preparar();
+    const nova = await repos.arquivos.criarNovaVersao(arquivo.grupoArquivoId, { ...METADADOS_OK, comentarioVersao: "Correção de conteúdo" }, "atendente");
+    expect(nova.comentarioVersao).toBe("Correção de conteúdo");
+    expect(nova.referenciaMock).not.toBe(arquivo.referenciaMock);
+    await expect(repos.trabalhos.mover(trabalho.id, "gerente", trabalho.workflow.etapas[1].id)).rejects.toThrow(/substituída/);
+    await expect(repos.arquivos.aprovarTecnicamente(arquivo.id, "gerente", null)).rejects.toThrow(/substituída/);
+    await expect(repos.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "gerente")).rejects.toThrow(/substituída/);
+    const eventos = await repos.auditoria.listar(EMPRESA_ID, 100);
+    expect(eventos.some((e) => e.acao === "trabalho_bloqueado_por_arquivo" && e.dadosDepois?.motivo)).toBe(true);
+  });
+  it("aprovação do cliente exigida mesmo para arquivo do cliente e token antigo revogado no reenvio", async () => {
+    const { repos, trabalho, arquivo } = await preparar();
+    const enviado = await repos.arquivos.enviarParaAprovacaoCliente(arquivo.id, "atendente");
+    await expect(repos.trabalhos.mover(trabalho.id, "gerente", trabalho.workflow.etapas[1].id)).rejects.toThrow(/cliente/);
+    const reenviado = await repos.arquivos.enviarParaAprovacaoCliente(arquivo.id, "gerente");
+    await expect(repos.arquivos.registrarDecisaoPublicaCliente(enviado.tokenAprovacaoPublica!, "aprovado", null)).rejects.toThrow(/inválido/);
+    await repos.arquivos.registrarDecisaoPublicaCliente(reenviado.tokenAprovacaoPublica!, "aprovado", null);
+    await expect(repos.trabalhos.mover(trabalho.id, "gerente", trabalho.workflow.etapas[1].id)).resolves.toBeTruthy();
+  });
+  it("reanalise exige nova aprovação técnica e não muda requisitos de trabalho retroativamente", async () => {
+    const { repos, trabalho, arquivo } = await preparar();
+    await repos.servicos.atualizar(trabalho.servicoId!, { requisitoArquivo: { formatoEsperado: "jpg", paginasEsperadas: 9, larguraEsperadaMm: null, alturaEsperadaMm: null } });
+    const analisado = await repos.arquivos.reanalisar(arquivo.id, "gerente");
+    expect(analisado.analise?.status).toBe("ok");
+    expect(analisado.statusAprovacaoTecnica).toBe("pendente");
+    await expect(repos.trabalhos.mover(trabalho.id, "gerente", trabalho.workflow.etapas[1].id)).rejects.toThrow(/tecnica/);
+  });
+  it("rejeição técnica posterior bloqueia conclusão de etapa dependente", async () => {
+    const { repos, trabalho, arquivo } = await preparar();
+    await repos.trabalhos.mover(trabalho.id, "gerente", trabalho.workflow.etapas[1].id);
+    await repos.arquivos.rejeitarTecnicamente(arquivo.id, "gerente", "Defeito encontrado");
+    await expect(repos.trabalhos.concluir(trabalho.id, "gerente")).rejects.toThrow(/tecnica/);
+  });
+});

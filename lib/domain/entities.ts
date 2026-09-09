@@ -479,6 +479,8 @@ export type Trabalho = {
    * dedicada de liberacao (ver ArquivoRepository/TrabalhoRepository).
    */
   arquivoLiberadoId: string | null;
+  /** SPEC 07: requisito congelado; undefined apenas em registros anteriores. */
+  requisitoArquivo?: RequisitoArquivoServico | null;
   criadoEm: string;
   concluidoEm: string | null;
 };
@@ -589,6 +591,8 @@ export type AnalisePreflight = {
   mimeType: string;
   regras: RegraPreflight[];
   analisadoEm: string;
+  formatoAproximado?: string | null;
+  resumo?: string;
 };
 
 /** Requisitos de arquivo de um Servico (SPEC 07) — comparados ao AnalisePreflight de forma determinística. */
@@ -639,6 +643,10 @@ export type Arquivo = {
   origem: OrigemArquivo;
   /** Estavel entre versoes do MESMO arquivo logico — nunca muda numa nova versao. */
   grupoArquivoId: string;
+  referenciaMock?: string;
+  comentarioVersao?: string | null;
+  briefing?: string | null;
+  exigeAprovacaoCliente?: boolean;
   /** Sequencial dentro do grupo, comecando em 1. */
   versao: number;
   /** Aponta para a versao anterior deste grupo, se houver. */

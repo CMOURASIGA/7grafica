@@ -12,7 +12,7 @@ function gerarToken(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
+  throw new Error("Este navegador precisa de HTTPS para gerar o token de aprovação.");
 }
 
 function registrarEvento(evento: Omit<EventoAuditoria, "id" | "criadoEm">): void {
@@ -40,9 +40,21 @@ function salvar(atualizado: Arquivo): Arquivo {
 function obterRequisitoDoTrabalho(trabalhoId: string | null) {
   if (!trabalhoId) return null;
   const trabalho = lerColecao<Trabalho>(CHAVE_TRABALHOS).find((item) => item.id === trabalhoId);
+  if (trabalho?.requisitoArquivo !== undefined) return trabalho.requisitoArquivo;
   if (!trabalho?.servicoId) return null;
   const servico = lerColecao<Servico>(CHAVE_SERVICOS).find((item) => item.id === trabalho.servicoId);
   return servico?.requisitoArquivo ?? null;
+}
+
+function exigirVersaoAtiva(arquivo: Arquivo): void {
+  if (["substituido", "cancelado"].includes(arquivo.situacao)) throw new Error("Versão substituída/cancelada não pode ser alterada.");
+}
+
+function auditarAnalise(arquivo: Arquivo, usuarioId: string | null): void {
+  registrarEvento({ empresaId: arquivo.empresaId, usuarioId, acao: "arquivo_analise_realizada", entidade: "arquivo", entidadeId: arquivo.id,
+    dadosAntes: null, dadosDepois: { status: arquivo.analise?.status, regras: arquivo.analise?.regras } });
+  if (arquivo.analise?.status !== "ok") registrarEvento({ empresaId: arquivo.empresaId, usuarioId, acao: "arquivo_problema_encontrado", entidade: "arquivo", entidadeId: arquivo.id,
+    dadosAntes: null, dadosDepois: { regras: arquivo.analise?.regras } });
 }
 
 export function criarArquivoRepositoryLocal(): ArquivoRepository {
@@ -62,6 +74,18 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
     async listarPorSolicitacao(solicitacaoId) {
       return lerColecao<Arquivo>(CHAVE).filter((arquivo) => arquivo.solicitacaoId === solicitacaoId);
     },
+    async vincularTrabalho(arquivoId, trabalhoId, usuarioId) {
+      const arquivo = obterOuFalhar(arquivoId);
+      exigirVersaoAtiva(arquivo);
+      if (arquivo.trabalhoId) throw new Error("Arquivo já vinculado a um Trabalho.");
+      const trabalho = lerColecao<Trabalho>(CHAVE_TRABALHOS).find((item) => item.id === trabalhoId);
+      if (!trabalho || trabalho.empresaId !== arquivo.empresaId || (arquivo.pedidoId && arquivo.pedidoId !== trabalho.pedidoId)) throw new Error("Trabalho incompatível com o arquivo.");
+      const atualizado = salvar({ ...arquivo, trabalhoId, pedidoId: trabalho.pedidoId, statusAprovacaoTecnica: "pendente", aprovacaoTecnica: null,
+        analise: rodarPreflight({ ...arquivo, paginas: arquivo.analise?.paginas ?? null, larguraMm: arquivo.analise?.larguraMm ?? null, alturaMm: arquivo.analise?.alturaMm ?? null }, obterRequisitoDoTrabalho(trabalhoId)) });
+      registrarEvento({ empresaId: arquivo.empresaId, usuarioId, acao: "arquivo_vinculado_trabalho", entidade: "arquivo", entidadeId: arquivo.id, dadosAntes: { trabalhoId: null }, dadosDepois: { trabalhoId } });
+      auditarAnalise(atualizado, usuarioId);
+      return atualizado;
+    },
     async listarVersoes(grupoArquivoId) {
       return lerColecao<Arquivo>(CHAVE)
         .filter((arquivo) => arquivo.grupoArquivoId === grupoArquivoId)
@@ -71,6 +95,11 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
       return lerColecao<Arquivo>(CHAVE).find((arquivo) => arquivo.tokenAprovacaoPublica === token) ?? null;
     },
     async receber(dados, usuarioId) {
+      if (!dados.nome.trim()) throw new Error("Informe o nome do arquivo.");
+      if (dados.trabalhoId) {
+        const trabalho = lerColecao<Trabalho>(CHAVE_TRABALHOS).find((item) => item.id === dados.trabalhoId);
+        if (!trabalho || trabalho.empresaId !== dados.empresaId || (dados.pedidoId && trabalho.pedidoId !== dados.pedidoId)) throw new Error("Vínculos do arquivo incompatíveis com o Trabalho.");
+      }
       const requisito = obterRequisitoDoTrabalho(dados.trabalhoId);
       const analise = rodarPreflight(dados, requisito);
       const novo: Arquivo = {
@@ -86,6 +115,10 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
         tamanhoBytes: dados.tamanhoBytes,
         origem: dados.origem,
         grupoArquivoId: gerarId("grp"),
+        referenciaMock: `mock://arquivos/${gerarToken()}`,
+        comentarioVersao: dados.comentarioVersao?.trim() || null,
+        briefing: dados.briefing?.trim() || null,
+        exigeAprovacaoCliente: dados.tipo === "arte" || Boolean(dados.exigeAprovacaoCliente),
         versao: 1,
         versaoAnteriorId: null,
         enviadoPorUsuarioId: dados.enviadoPorUsuarioId,
@@ -111,17 +144,7 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
         dadosAntes: null,
         dadosDepois: { nome: novo.nome, tipo: novo.tipo, versao: novo.versao, statusPreflight: analise.status },
       });
-      if (analise.regras.length > 0) {
-        registrarEvento({
-          empresaId: novo.empresaId,
-          usuarioId,
-          acao: "arquivo_analise_realizada",
-          entidade: "arquivo",
-          entidadeId: novo.id,
-          dadosAntes: null,
-          dadosDepois: { status: analise.status, regras: analise.regras },
-        });
-      }
+      auditarAnalise(novo, usuarioId);
       return novo;
     },
     async criarNovaVersao(grupoArquivoId, dados, usuarioId) {
@@ -130,6 +153,8 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
         .sort((a, b) => b.versao - a.versao)[0];
       if (!versaoAnterior) throw new Error(`Nenhum arquivo encontrado no grupo ${grupoArquivoId}.`);
 
+      exigirVersaoAtiva(versaoAnterior);
+      if (!dados.nome.trim()) throw new Error("Informe o nome do arquivo.");
       const requisito = obterRequisitoDoTrabalho(versaoAnterior.trabalhoId);
       const analise = rodarPreflight(dados, requisito);
       const nova: Arquivo = {
@@ -145,6 +170,10 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
         tamanhoBytes: dados.tamanhoBytes,
         origem: versaoAnterior.origem,
         grupoArquivoId,
+        referenciaMock: `mock://arquivos/${gerarToken()}`,
+        comentarioVersao: dados.comentarioVersao?.trim() || null,
+        briefing: dados.briefing?.trim() || versaoAnterior.briefing || null,
+        exigeAprovacaoCliente: versaoAnterior.tipo === "arte" || Boolean(versaoAnterior.exigeAprovacaoCliente || versaoAnterior.tokenAprovacaoPublica),
         versao: versaoAnterior.versao + 1,
         versaoAnteriorId: versaoAnterior.id,
         enviadoPorUsuarioId: usuarioId,
@@ -178,20 +207,25 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
         dadosAntes: { versaoAnteriorId: versaoAnterior.id, versaoAnterior: versaoAnterior.versao },
         dadosDepois: { versao: nova.versao, statusPreflight: analise.status },
       });
+      auditarAnalise(nova, usuarioId);
       return nova;
     },
-    async reanalisar(arquivoId) {
+    async reanalisar(arquivoId, usuarioId = null) {
       const arquivo = obterOuFalhar(arquivoId);
+      exigirVersaoAtiva(arquivo);
       const requisito = obterRequisitoDoTrabalho(arquivo.trabalhoId);
       const analise = rodarPreflight(
         { nome: arquivo.nome, extensao: arquivo.extensao, mimeType: arquivo.mimeType, tamanhoBytes: arquivo.tamanhoBytes, paginas: arquivo.analise?.paginas ?? null, larguraMm: arquivo.analise?.larguraMm ?? null, alturaMm: arquivo.analise?.alturaMm ?? null },
         requisito,
       );
-      return salvar({ ...arquivo, analise });
+      const atualizado = salvar({ ...arquivo, analise, statusAprovacaoTecnica: "pendente", aprovacaoTecnica: null });
+      auditarAnalise(atualizado, usuarioId);
+      return atualizado;
     },
     async aprovarTecnicamente(arquivoId, usuarioId, comentario) {
       const arquivo = obterOuFalhar(arquivoId);
-      if (arquivo.analise?.status === "bloqueio") {
+      exigirVersaoAtiva(arquivo);
+      if (!arquivo.analise || arquivo.analise.status === "bloqueio") {
         throw new Error("Não é possível aprovar tecnicamente um arquivo com bloqueio no preflight — receba uma nova versão.");
       }
       const atualizado = salvar({
@@ -212,6 +246,7 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
     },
     async rejeitarTecnicamente(arquivoId, usuarioId, comentario) {
       const arquivo = obterOuFalhar(arquivoId);
+      exigirVersaoAtiva(arquivo);
       const atualizado = salvar({
         ...arquivo,
         statusAprovacaoTecnica: "rejeitado",
@@ -230,10 +265,13 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
     },
     async enviarParaAprovacaoCliente(arquivoId, usuarioId) {
       const arquivo = obterOuFalhar(arquivoId);
+      exigirVersaoAtiva(arquivo);
       const atualizado = salvar({
         ...arquivo,
         situacao: "aguardando_aprovacao_cliente",
-        tokenAprovacaoPublica: arquivo.tokenAprovacaoPublica ?? gerarToken(),
+        tokenAprovacaoPublica: gerarToken(),
+        exigeAprovacaoCliente: true,
+        aprovacaoCliente: null,
       });
       registrarEvento({
         empresaId: atualizado.empresaId,
@@ -247,6 +285,7 @@ export function criarArquivoRepositoryLocal(): ArquivoRepository {
       return atualizado;
     },
     async registrarDecisaoPublicaCliente(token, decisao, comentario) {
+      if (!["aprovado", "alteracao_solicitada", "rejeitado"].includes(decisao)) throw new Error("Decisão inválida.");
       const arquivo = lerColecao<Arquivo>(CHAVE).find((item) => item.tokenAprovacaoPublica === token);
       if (!arquivo) throw new Error("Link inválido ou expirado.");
       if (arquivo.situacao !== "aguardando_aprovacao_cliente") {

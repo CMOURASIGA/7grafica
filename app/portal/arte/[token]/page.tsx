@@ -57,7 +57,7 @@ export default function PortalArtePage({ params }: { params: Promise<{ token: st
       setArquivo(atualizado);
       setMensagem(
         decisao === "aprovado"
-          ? "Arte aprovada! Nossa equipe vai seguir com a produção."
+          ? "Aprovação registrada. A equipe ainda precisa conferir a aprovação técnica e liberar esta versão."
           : decisao === "rejeitado"
             ? "Recebemos sua recusa. Vamos entrar em contato."
             : "Recebemos seu pedido de alteração. Uma nova versão será enviada em breve.",
@@ -89,14 +89,14 @@ export default function PortalArtePage({ params }: { params: Promise<{ token: st
         <img src={identidade.logoUrl} alt={identidade.nomeCliente ?? "Consult Services Tecnologia"} className="h-12 w-12 rounded-lg object-contain" />
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.24em] text-(--accent)">Aprovação de arte</p>
-          <p className="text-sm text-(--text-secondary)">
+          <p className="break-all text-sm text-(--text-secondary)">
             {arquivo.nome} — versão {arquivo.versao}
           </p>
         </div>
       </div>
 
       <section className="rounded-[1.8rem] border border-(--border) bg-(--bg-surface) p-6 shadow-[var(--shadow-card)]">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="text-xl font-semibold text-(--text-primary)">Confira a arte produzida</h1>
           <StatusPill tone={arquivo.situacao === "aprovado_cliente" ? "success" : arquivo.situacao === "rejeitado_cliente" ? "danger" : "accent"}>
             {SITUACAO_LABEL[arquivo.situacao]}
@@ -104,16 +104,16 @@ export default function PortalArtePage({ params }: { params: Promise<{ token: st
         </div>
 
         <p className="mt-4 text-sm text-(--text-secondary)">
-          Este é um MVP local-first: o arquivo em si não é exibido aqui (sem armazenamento real ainda) — a aprovação registra sua decisão sobre a
-          versão {arquivo.versao} de &quot;{arquivo.nome}&quot;.
+          O conteúdo do arquivo não está disponível nesta tela. Confira externamente a versão {arquivo.versao} de &quot;{arquivo.nome}&quot; antes de registrar sua decisão.
+
         </p>
 
         {aguardandoDecisao ? (
           <div className="mt-6 border-t border-(--border) pt-5">
             <p className="text-sm font-semibold text-(--text-primary)">O que você decide sobre esta arte?</p>
             <div className="mt-3">
-              <label className="workspace-label">Comentário (opcional)</label>
-              <textarea className="workspace-textarea" value={comentario} onChange={(event) => setComentario(event.target.value)} />
+              <label htmlFor="comentario-cliente" className="workspace-label">Comentário (opcional)</label>
+              <textarea id="comentario-cliente" className="workspace-textarea" value={comentario} onChange={(event) => setComentario(event.target.value)} />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" disabled={enviando} className="workspace-button-primary" onClick={() => void decidir("aprovado")}>

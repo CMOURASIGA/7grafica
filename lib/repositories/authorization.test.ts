@@ -511,7 +511,12 @@ describe("RBAC de Arquivos e Arte (SPEC 07) — repositorio", () => {
     const { base, trabalho, arquivo } = await prepararArquivo();
     const repos = protegerRepositories(base, "operador", "usuario-operador-dono");
 
+    await expect(repos.arquivos.listarPorTrabalho(trabalho.id)).resolves.toHaveLength(0);
+    await base.arquivos.aprovarTecnicamente(arquivo.id, "usuario-gerente", null);
+    await base.trabalhos.liberarArquivoParaProducao(trabalho.id, arquivo.id, "usuario-gerente");
     await expect(repos.arquivos.listarPorTrabalho(trabalho.id)).resolves.toHaveLength(1);
+    await expect(protegerRepositories(base, "operador", "outro-operador").arquivos.obter(arquivo.id)).resolves.toBeNull();
+    await expect(repos.arquivos.listarVersoes(arquivo.grupoArquivoId)).resolves.toHaveLength(1);
     await expect(repos.arquivos.aprovarTecnicamente(arquivo.id, "usuario-operador-dono", null)).rejects.toBeInstanceOf(PermissaoNegadaError);
     await expect(
       repos.arquivos.receber(

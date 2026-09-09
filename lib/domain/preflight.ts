@@ -54,7 +54,14 @@ export function rodarPreflight(dados: DadosMetadadosArquivo, requisito: Requisit
     }
   }
 
-  if (dados.tamanhoBytes <= 0) {
+  for (const [campo, valor] of Object.entries({ paginas: dados.paginas, larguraMm: dados.larguraMm, alturaMm: dados.alturaMm })) {
+    if (valor != null && (!Number.isFinite(valor) || valor <= 0 || (campo === "paginas" && !Number.isInteger(valor)))) {
+      regras.push({ codigo: "metadado_invalido", mensagem: `Metadado ${campo} deve ser um número positivo válido.`, severidade: "bloqueio" });
+    }
+  }
+  if (dados.extensao.toLowerCase() === "pdf" && dados.mimeType !== "application/pdf") regras.push({ codigo: "mime_divergente", mensagem: "Extensão PDF com MIME incompatível.", severidade: "bloqueio" });
+  if (dados.extensao.toLowerCase() === "pdf" && (dados.paginas == null || dados.larguraMm == null || dados.alturaMm == null) && !regras.some((r) => r.codigo.endsWith("desconhecidas") || r.codigo.endsWith("desconhecida"))) regras.push({ codigo: "pdf_incompleto", mensagem: "Metadados do PDF incompletos. Confira o documento antes da aprovação técnica.", severidade: "alerta" });
+  if (!Number.isFinite(dados.tamanhoBytes) || dados.tamanhoBytes <= 0) {
     regras.push({ codigo: "arquivo_vazio", mensagem: "Arquivo com tamanho zero.", severidade: "bloqueio" });
   }
 
@@ -66,6 +73,8 @@ export function rodarPreflight(dados: DadosMetadadosArquivo, requisito: Requisit
 
   return {
     status,
+    resumo: status === "ok" ? "Metadados disponíveis atendem às regras verificadas." : "Confira os motivos encontrados na análise.",
+    formatoAproximado: formatoAproximado(dados.larguraMm, dados.alturaMm),
     paginas: dados.paginas,
     larguraMm: dados.larguraMm,
     alturaMm: dados.alturaMm,
@@ -75,4 +84,13 @@ export function rodarPreflight(dados: DadosMetadadosArquivo, requisito: Requisit
     regras,
     analisadoEm: new Date().toISOString(),
   };
+}
+
+function formatoAproximado(largura: number | null, altura: number | null): string | null {
+  if (!largura || !altura) return null;
+  const menor = Math.min(largura, altura), maior = Math.max(largura, altura);
+  for (const [nome, l, a] of [["A3", 297, 420], ["A4", 210, 297], ["A5", 148, 210], ["A6", 105, 148]] as const) {
+    if (Math.abs(menor - l) <= 2 && Math.abs(maior - a) <= 2) return nome;
+  }
+  return "Personalizado";
 }

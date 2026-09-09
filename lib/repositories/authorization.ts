@@ -1,4 +1,5 @@
-import type { Papel } from "@/lib/domain/entities";
+import { motivoArquivoInvalido } from "@/lib/domain/liberacao-arquivo";
+import type { Arquivo, Papel } from "@/lib/domain/entities";
 import { PERMISSOES, papelTemPermissao, type Permissao } from "@/lib/rbac";
 import type { Repositories } from "@/lib/repositories/types";
 
@@ -129,7 +130,7 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
     visualizar: PERMISSOES.ARQUIVOS_CONSULTAR,
     permitirSe: ({ papel, metodo }) => {
       if (papel !== "atendente") return false;
-      const METODOS_DO_ATENDENTE = new Set(["receber", "criarNovaVersao", "enviarParaAprovacaoCliente"]);
+      const METODOS_DO_ATENDENTE = new Set(["receber", "criarNovaVersao", "enviarParaAprovacaoCliente", "vincularTrabalho"]);
       return METODOS_DO_ATENDENTE.has(metodo);
     },
   },
@@ -203,7 +204,20 @@ function protegerRepositorio<T extends object>(
           }
         }
 
-        return (original as (...a: unknown[]) => unknown).apply(target, args);
+        const resultado = await (original as (...a: unknown[]) => unknown).apply(target, args);
+        if (nome === "arquivos" && papel === "operador" && !ehEscrita) {
+          const podeConsultar = async (arquivo: Arquivo): Promise<boolean> => {
+            if (!usuarioId || !arquivo.trabalhoId) return false;
+            const trabalho = await baseRepositories.trabalhos.obter(arquivo.trabalhoId);
+            return Boolean(trabalho && trabalho.responsavelUsuarioId === usuarioId && trabalho.arquivoLiberadoId === arquivo.id && !motivoArquivoInvalido(trabalho, arquivo));
+          };
+          if (Array.isArray(resultado)) {
+            const permitidos = await Promise.all(resultado.map((arquivo: Arquivo) => podeConsultar(arquivo)));
+            return resultado.filter((_, index) => permitidos[index]);
+          }
+          return resultado && await podeConsultar(resultado as Arquivo) ? resultado : null;
+        }
+        return resultado;
       };
     },
   });

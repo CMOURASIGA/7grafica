@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArquivosComerciais } from "@/components/arquivos-comerciais";
 import { useRouter } from "next/navigation";
 import { PageIntro, StatusPill, SurfaceCard } from "@/components/ui/workspace-primitives";
 import { useToast } from "@/components/ui/toast";
@@ -149,6 +150,7 @@ export default function SolicitacaoDetalhePage({ params }: { params: Promise<{ i
           </div>
         )}
       </SurfaceCard>
+      <ArquivosComerciais empresaId={solicitacao.empresaId} solicitacaoId={solicitacao.id} />
     </div>
   );
 }

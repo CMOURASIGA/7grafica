@@ -1,3 +1,4 @@
+import { exigirArquivoDaEtapa } from "./validar-arquivo-etapa";
 import { gerarId, gravarColecao, lerColecao } from "@/lib/storage/local-storage-client";
 import { avaliarCompatibilidade } from "@/lib/domain/compatibilidade-equipamento";
 import type { AlocacaoEquipamento, CapacidadeEquipamento, EventoAuditoria, Equipamento, Trabalho } from "@/lib/domain/entities";
@@ -136,6 +137,7 @@ export function criarAlocacaoEquipamentoRepositoryLocal(): AlocacaoEquipamentoRe
     },
     async iniciarPreparacao(alocacaoId, usuarioId) {
       const alocacao = obterOuFalhar(alocacaoId);
+      exigirArquivoDaEtapa(obterTrabalhoOuFalhar(alocacao.trabalhoId), alocacao.etapaId, usuarioId);
       exigirAtiva(alocacao, "iniciar preparação");
       const atualizada = salvar({ ...alocacao, situacao: "preparacao", atualizadoEm: new Date().toISOString() });
       registrarEvento({
@@ -151,6 +153,7 @@ export function criarAlocacaoEquipamentoRepositoryLocal(): AlocacaoEquipamentoRe
     },
     async iniciar(alocacaoId, usuarioId) {
       const alocacao = obterOuFalhar(alocacaoId);
+      exigirArquivoDaEtapa(obterTrabalhoOuFalhar(alocacao.trabalhoId), alocacao.etapaId, usuarioId);
       exigirAtiva(alocacao, "iniciar execução");
       const atualizada = salvar({
         ...alocacao,
@@ -194,6 +197,7 @@ export function criarAlocacaoEquipamentoRepositoryLocal(): AlocacaoEquipamentoRe
     },
     async retomar(alocacaoId, usuarioId) {
       const alocacao = obterOuFalhar(alocacaoId);
+      exigirArquivoDaEtapa(obterTrabalhoOuFalhar(alocacao.trabalhoId), alocacao.etapaId, usuarioId);
       if (alocacao.situacao !== "pausada") {
         throw new Error(`Só é possível retomar uma alocação pausada (situação atual: "${alocacao.situacao}").`);
       }
@@ -211,6 +215,7 @@ export function criarAlocacaoEquipamentoRepositoryLocal(): AlocacaoEquipamentoRe
     },
     async concluir(alocacaoId, usuarioId) {
       const alocacao = obterOuFalhar(alocacaoId);
+      exigirArquivoDaEtapa(obterTrabalhoOuFalhar(alocacao.trabalhoId), alocacao.etapaId, usuarioId);
       exigirAtiva(alocacao, "concluir");
       const atualizada = salvar({
         ...alocacao,

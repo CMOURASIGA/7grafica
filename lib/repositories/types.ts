@@ -371,6 +371,8 @@ export type AlocacaoEquipamentoRepository = {
 // --- SPEC 07: Arquivos e Arte -----------------------------------------------
 
 export type DadosMetadadosArquivo = {
+  comentarioVersao?: string | null;
+  briefing?: string | null;
   nome: string;
   extensao: string;
   mimeType: string;
@@ -382,6 +384,7 @@ export type DadosMetadadosArquivo = {
 };
 
 export type DadosReceberArquivo = DadosMetadadosArquivo & {
+  exigeAprovacaoCliente?: boolean;
   empresaId: string;
   solicitacaoId: string | null;
   pedidoId: string | null;
@@ -400,6 +403,7 @@ export type ArquivoRepository = {
   listarPorSolicitacao(solicitacaoId: string): Promise<Arquivo[]>;
   /** Historico completo de versoes do mesmo arquivo logico, mais antiga primeiro. */
   listarVersoes(grupoArquivoId: string): Promise<Arquivo[]>;
+  vincularTrabalho(arquivoId: string, trabalhoId: string, usuarioId: string): Promise<Arquivo>;
   buscarPorTokenAprovacaoPublica(token: string): Promise<Arquivo | null>;
   /** Cria a versao 1 de um novo arquivo logico e roda o preflight automaticamente. */
   receber(dados: DadosReceberArquivo, usuarioId: string | null): Promise<Arquivo>;
@@ -409,7 +413,7 @@ export type ArquivoRepository = {
    */
   criarNovaVersao(grupoArquivoId: string, dados: DadosMetadadosArquivo, usuarioId: string | null): Promise<Arquivo>;
   /** Re-roda o preflight (ex.: apos editar requisitos do Servico) — idempotente. */
-  reanalisar(arquivoId: string): Promise<Arquivo>;
+  reanalisar(arquivoId: string, usuarioId?: string | null): Promise<Arquivo>;
   aprovarTecnicamente(arquivoId: string, usuarioId: string, comentario: string | null): Promise<Arquivo>;
   rejeitarTecnicamente(arquivoId: string, usuarioId: string, comentario: string | null): Promise<Arquivo>;
   /** Gera (ou reaproveita) o token publico e muda a situacao para aguardando o cliente. */

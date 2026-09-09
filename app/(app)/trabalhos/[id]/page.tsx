@@ -2,6 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { motivoArquivoInvalido } from "@/lib/domain/liberacao-arquivo";
+import { lerMetadadosArquivo } from "@/lib/domain/ler-metadados-arquivo";
 import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/ui/workspace-primitives";
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
@@ -90,6 +92,9 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
   const [comentariosTecnicos, setComentariosTecnicos] = useState<Record<string, string>>({});
   const [mostrarFormularioArquivo, setMostrarFormularioArquivo] = useState(false);
   const [grupoAlvoNovaVersao, setGrupoAlvoNovaVersao] = useState<string | null>(null);
+  const [arquivoComentario, setArquivoComentario] = useState("");
+  const [arquivoBriefing, setArquivoBriefing] = useState("");
+  const [lendoArquivo, setLendoArquivo] = useState(false);
   const [arquivoFormNome, setArquivoFormNome] = useState("");
   const [arquivoFormExtensao, setArquivoFormExtensao] = useState("pdf");
   const [arquivoFormTamanhoKB, setArquivoFormTamanhoKB] = useState("");
@@ -127,7 +132,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
       ]);
       setPedido(pedidoAtual);
       setCliente(clienteAtual);
-      setEventos(listaEventos.filter((evento) => evento.entidade === "trabalho" && evento.entidadeId === atual.id));
+      setEventos(listaEventos.filter((evento) => (evento.entidade === "trabalho" && evento.entidadeId === atual.id) || (papel !== "operador" && evento.entidade === "arquivo" && listaArquivos.some((arquivo) => arquivo.id === evento.entidadeId))));
       setEquipe(listaEquipe.filter((vinculo) => vinculo.ativo));
       setAlocacoes(listaAlocacoes);
       setEquipamentos(listaEquipamentos);
@@ -247,6 +252,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
   function limparFormularioArquivo() {
     setMostrarFormularioArquivo(false);
     setGrupoAlvoNovaVersao(null);
+    setArquivoComentario("");
+    setArquivoBriefing("");
     setArquivoFormNome("");
     setArquivoFormExtensao("pdf");
     setArquivoFormTamanhoKB("");
@@ -258,6 +265,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
   }
 
   function abrirNovaVersao(arquivo: Arquivo) {
+    setArquivoComentario("");
+    setArquivoBriefing(arquivo.briefing ?? "");
     setGrupoAlvoNovaVersao(arquivo.grupoArquivoId);
     setArquivoFormNome(arquivo.nome);
     setArquivoFormExtensao(arquivo.extensao);
@@ -268,14 +277,31 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
     setMostrarFormularioArquivo(true);
   }
 
+  async function selecionarArquivo(file: File | undefined) {
+    if (!file) return;
+    setLendoArquivo(true);
+    try {
+      const dados = await lerMetadadosArquivo(file);
+      setArquivoFormNome(dados.nome); setArquivoFormExtensao(dados.extensao);
+      setArquivoFormTamanhoKB(String(dados.tamanhoBytes / 1024));
+      setArquivoFormPaginas(dados.paginas == null ? "" : String(dados.paginas));
+      setArquivoFormLarguraMm(dados.larguraMm == null ? "" : String(dados.larguraMm));
+      setArquivoFormAlturaMm(dados.alturaMm == null ? "" : String(dados.alturaMm));
+      showToast("Metadados lidos. O conteúdo não será armazenado.", "success");
+    } catch (erro) { showToast(erro instanceof Error ? erro.message : "Falha na leitura.", "error"); }
+    finally { setLendoArquivo(false); }
+  }
+
   async function handleSalvarArquivo() {
     if (!arquivoFormNome.trim()) return showToast("Informe o nome do arquivo.", "error");
     const tamanhoBytes = Math.round((Number(arquivoFormTamanhoKB) || 0) * 1024);
     if (tamanhoBytes <= 0) return showToast("Informe um tamanho válido.", "error");
     const metadados = {
+      comentarioVersao: arquivoComentario,
+      briefing: arquivoBriefing,
       nome: arquivoFormNome.trim(),
       extensao: arquivoFormExtensao,
-      mimeType: arquivoFormExtensao === "pdf" ? "application/pdf" : `image/${arquivoFormExtensao}`,
+      mimeType: arquivoFormExtensao === "pdf" ? "application/pdf" : ({ jpg: "image/jpeg", png: "image/png", ai: "application/postscript", psd: "image/vnd.adobe.photoshop" }[arquivoFormExtensao] ?? "application/octet-stream"),
       tamanhoBytes,
       paginas: arquivoFormPaginas ? Number(arquivoFormPaginas) : null,
       larguraMm: arquivoFormLarguraMm ? Number(arquivoFormLarguraMm) : null,
@@ -513,11 +539,11 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
 
         <ul className="mt-3 flex flex-col gap-3">
           {gruposArquivo.map(({ grupoId, atual, historico }) => {
-            const liberado = trabalho.arquivoLiberadoId === atual.id;
+            const liberado = trabalho.arquivoLiberadoId === atual.id && !motivoArquivoInvalido(trabalho, atual);
             const podeLiberar =
-              podeGerenciarTudo && !liberado && atual.statusAprovacaoTecnica === "aprovado" && (atual.tipo !== "arte" || atual.situacao === "aprovado_cliente");
+              podeGerenciarTudo && !liberado && !motivoArquivoInvalido(trabalho, atual);
             return (
-              <li key={grupoId} className="rounded-xl border border-(--border) p-4">
+              <li key={grupoId} className="min-w-0 break-words rounded-xl border border-(--border) p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium text-(--text-primary)">
@@ -541,6 +567,11 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                   </div>
                 </div>
 
+                <p className="mt-2 text-xs text-(--text-secondary)">{atual.analise?.resumo} {atual.analise?.paginas ?? "?"} pág. · {atual.analise?.larguraMm ?? "?"} × {atual.analise?.alturaMm ?? "?"} mm · {atual.analise?.orientacao} · {atual.analise?.formatoAproximado}</p>
+                {atual.briefing ? <p className="mt-2 text-sm">Briefing: {atual.briefing}</p> : null}
+                {atual.comentarioVersao ? <p className="mt-2 text-sm">Comentário da versão: {atual.comentarioVersao}</p> : null}
+                <p className="mt-1 text-xs">Responsável: {equipe.find((v) => v.usuarioId === atual.enviadoPorUsuarioId)?.perfil?.nome ?? atual.enviadoPorUsuarioId ?? "Cliente"}</p>
+                {trabalho.arquivoLiberadoId === atual.id && !liberado ? <p className="mt-2 text-sm text-(--danger)">Liberação suspensa: {motivoArquivoInvalido(trabalho, atual)}</p> : null}
                 {atual.analise && atual.analise.regras.length > 0 ? (
                   <ul className="mt-2 list-disc pl-5 text-xs text-(--text-tertiary)">
                     {atual.analise.regras.map((regra, indice) => (
@@ -566,7 +597,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                 {atual.tokenAprovacaoPublica && atual.situacao === "aguardando_aprovacao_cliente" ? (
                   <p className="mt-1 text-xs text-(--text-tertiary)">
                     Link público:{" "}
-                    <Link href={`/portal/arte/${atual.tokenAprovacaoPublica}`} target="_blank" className="text-(--accent-strong) hover:underline">
+                    <Link href={`/portal/arte/${atual.tokenAprovacaoPublica}`} target="_blank" className="break-all text-(--accent-strong) hover:underline">
                       /portal/arte/{atual.tokenAprovacaoPublica}
                     </Link>
                   </p>
@@ -576,7 +607,8 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <input
                       type="text"
-                      placeholder="Comentário (opcional)"
+                      aria-label="Comentário técnico"
+                      placeholder="Comentário técnico (opcional)"
                       className="workspace-input"
                       value={comentariosTecnicos[atual.id] ?? ""}
                       onChange={(event) => setComentariosTecnicos((prev) => ({ ...prev, [atual.id]: event.target.value }))}
@@ -591,7 +623,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                 ) : null}
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {podeAnexarArquivos && (atual.tipo === "arte" || atual.situacao === "em_criacao" || atual.situacao === "alteracao_solicitada") ? (
+                  {podeAnexarArquivos && !["aguardando_aprovacao_cliente", "aprovado_cliente", "substituido", "cancelado"].includes(atual.situacao) ? (
                     <button
                       type="button"
                       id={`arquivo-btn-enviar-cliente-${atual.id}`}
@@ -618,10 +650,12 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                     <summary className="cursor-pointer text-xs font-medium text-(--text-tertiary)">Histórico de versões ({historico.length})</summary>
                     <ul className="mt-2 flex flex-col gap-1 text-xs text-(--text-secondary)">
                       {historico.map((versaoAntiga) => (
-                        <li key={versaoAntiga.id} className="flex justify-between border-b border-(--border) py-1">
+                        <li key={versaoAntiga.id} className="flex flex-wrap justify-between gap-2 border-b border-(--border) py-1">
                           <span>
                             v{versaoAntiga.versao} — {versaoAntiga.nome} ({SITUACAO_ARQUIVO_LABEL[versaoAntiga.situacao]})
-                            {trabalho.arquivoLiberadoId === versaoAntiga.id ? " · liberado para produção" : ""}
+                            {trabalho.arquivoLiberadoId === versaoAntiga.id ? " · referência anterior, liberação suspensa" : ""}
+                            <br />Preflight: {versaoAntiga.analise?.status} · {versaoAntiga.comentarioVersao}
+                            <br />{versaoAntiga.analise?.regras.map((regra) => regra.mensagem).join(" ")}
                           </span>
                           <span className="text-(--text-tertiary)">{new Date(versaoAntiga.enviadoEm).toLocaleString("pt-BR")}</span>
                         </li>
@@ -651,8 +685,21 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
             ) : (
               <div className="grid grid-cols-1 gap-3 rounded-xl border border-(--border) bg-(--bg-muted) p-4 sm:grid-cols-2 lg:grid-cols-4">
                 <p className="text-xs font-medium text-(--text-tertiary) lg:col-span-4">
-                  {grupoAlvoNovaVersao ? "Nova versão — nunca sobrescreve, cria um novo registro ligado ao anterior." : "Novo arquivo (metadados simulados — MVP sem armazenamento binário real)."}
+                  {grupoAlvoNovaVersao ? "Nova versão. A anterior permanece no histórico." : "Registre os dados do arquivo. O conteúdo deve ser mantido externamente."}
                 </p>
+                <div className="sm:col-span-2 lg:col-span-4 min-w-0">
+                  <label htmlFor="arquivo-local" className="workspace-label">Ler metadados de um arquivo (até 25 MB)</label>
+                  <input id="arquivo-local" type="file" accept=".pdf,.jpg,.png,.ai,.cdr,.psd" className="w-full min-w-0 text-sm" disabled={lendoArquivo} onChange={(event) => void selecionarArquivo(event.target.files?.[0])} />
+                  <p className="text-xs">{lendoArquivo ? "Lendo arquivo..." : "A leitura preenche os campos abaixo. Nenhum conteúdo é armazenado."}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="arquivo-briefing" className="workspace-label">Briefing da arte</label>
+                  <textarea id="arquivo-briefing" className="workspace-textarea" value={arquivoBriefing} onChange={(event) => setArquivoBriefing(event.target.value)} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="arquivo-comentario" className="workspace-label">Comentário desta versão</label>
+                  <textarea id="arquivo-comentario" className="workspace-textarea" value={arquivoComentario} onChange={(event) => setArquivoComentario(event.target.value)} />
+                </div>
                 <div>
                   <label htmlFor="arquivo-form-nome" className="workspace-label">
                     Nome do arquivo
@@ -720,7 +767,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
                   </>
                 ) : null}
                 <div className="flex items-end gap-2 lg:col-span-4">
-                  <button type="button" id="arquivo-form-btn-salvar" className="workspace-button-primary" onClick={() => void handleSalvarArquivo()}>
+                  <button type="button" id="arquivo-form-btn-salvar" disabled={lendoArquivo} className="workspace-button-primary" onClick={() => void handleSalvarArquivo()}>
                     {grupoAlvoNovaVersao ? "Enviar nova versão" : "Registrar arquivo"}
                   </button>
                   <button type="button" id="arquivo-form-btn-cancelar" className="workspace-button-secondary" onClick={limparFormularioArquivo}>
@@ -928,7 +975,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
               <SectionLabel>Histórico de alocações</SectionLabel>
               <ul className="mt-2 flex flex-col gap-1 text-xs text-(--text-secondary)">
                 {historicoAlocacoes.map((alocacao) => (
-                  <li key={alocacao.id} className="flex justify-between border-b border-(--border) py-1">
+                  <li key={alocacao.id} className="flex flex-wrap justify-between gap-2 border-b border-(--border) py-1">
                     <span>
                       {nomeEquipamento(alocacao.equipamentoId)} — {SITUACAO_ALOCACAO_LABEL[alocacao.situacao]}
                       {alocacao.motivoRealocacao ? ` (realocado: ${alocacao.motivoRealocacao})` : ""}
@@ -1007,7 +1054,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
             {[...eventos]
               .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
               .map((evento) => (
-                <li key={evento.id} className="flex justify-between border-b border-(--border) py-1">
+                <li key={evento.id} className="flex flex-wrap justify-between gap-2 border-b border-(--border) py-1">
                   <span>{evento.acao}</span>
                   <span className="text-xs text-(--text-tertiary)">{new Date(evento.criadoEm).toLocaleString("pt-BR")}</span>
                 </li>

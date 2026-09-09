@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ArquivosComerciais } from "@/components/arquivos-comerciais";
 import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/ui/workspace-primitives";
 import { useToast } from "@/components/ui/toast";
 import { useRepositoriosAutorizados as useRepositories, useSessao } from "@/components/providers/session-provider";
@@ -575,6 +576,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
           </ul>
         )}
       </SurfaceCard>
+      <ArquivosComerciais empresaId={pedido.empresaId} pedidoId={pedido.id} />
     </div>
   );
 }
