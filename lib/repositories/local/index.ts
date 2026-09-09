@@ -1,4 +1,6 @@
-import type { CategoriaServico, FeatureFlag, FormaPagamento, Material, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
+import { criarMaterialRepositoryLocal } from "./materiais";
+import { criarEstoqueRepositoryLocal, criarComprasRepositoryLocal } from "./estoque";
+import type { CategoriaServico, FeatureFlag, FormaPagamento, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
 import type { Repositories } from "@/lib/repositories/types";
 import { criarCrudLocal } from "@/lib/repositories/local/crud-generico";
 import { criarEmpresaRepositoryLocal } from "@/lib/repositories/local/empresas";
@@ -32,6 +34,8 @@ import { criarArquivoRepositoryLocal } from "@/lib/repositories/local/arquivos";
  */
 export function criarRepositoriesLocal(): Repositories {
   return {
+    estoque: criarEstoqueRepositoryLocal(),
+    compras: criarComprasRepositoryLocal(),
     empresas: criarEmpresaRepositoryLocal(),
     usuarios: criarUsuarioRepositoryLocal(),
     sessao: criarSessaoRepositoryLocal(),
@@ -45,7 +49,7 @@ export function criarRepositoriesLocal(): Repositories {
     categoriasServico: criarCrudLocal<CategoriaServico, Omit<CategoriaServico, "id">>("categorias_servico", "cat-serv"),
     servicos: criarCrudLocal<Servico, Omit<Servico, "id">>("servicos", "servico"),
     unidadesMedida: criarCrudLocal<UnidadeMedida, Omit<UnidadeMedida, "id">>("unidades_medida", "unidade"),
-    materiais: criarCrudLocal<Material, Omit<Material, "id">>("materiais", "material"),
+    materiais: criarMaterialRepositoryLocal(),
     conversoesUnidade: criarConversaoUnidadeRepositoryLocal(),
     equipamentos: criarEquipamentoRepositoryLocal(),
     capacidadesEquipamento: criarCapacidadeEquipamentoRepositoryLocal(),

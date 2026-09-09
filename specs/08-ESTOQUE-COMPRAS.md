@@ -1,5 +1,7 @@
 # SPEC 08 - Estoque e Compras
 
+Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+
 ## Objetivo
 Controlar materiais consumidos e reposicao.
 
@@ -35,3 +37,9 @@ MVP:
 - registrar troca
 - custo estimado por pagina no equipamento
 Nao tentar controlar ml por pagina.
+
+## Checkpoint
+
+Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_08.md`.
+
+**Nao iniciar a SPEC 09 sem validacao do usuario.**

@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { EstoqueTrabalho } from "@/components/estoque-trabalho";
 import { motivoArquivoInvalido } from "@/lib/domain/liberacao-arquivo";
 import { lerMetadadosArquivo } from "@/lib/domain/ler-metadados-arquivo";
 import { PageIntro, SectionLabel, StatusPill, SurfaceCard } from "@/components/ui/workspace-primitives";
@@ -1062,6 +1063,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
           </ul>
         )}
       </SurfaceCard>
+      <EstoqueTrabalho trabalho={trabalho} />
     </div>
   );
 }

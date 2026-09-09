@@ -58,6 +58,8 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "kanban",
     permissaoRequerida: PERMISSOES.PRODUCAO_CONSULTAR,
   },
+  { section: "Producao", href: "/estoque", label: "Estoque", icon: "cadastros", permissaoRequerida: PERMISSOES.ESTOQUE_CONSULTAR },
+  { section: "Producao", href: "/compras", label: "Compras", icon: "pedido", permissaoRequerida: PERMISSOES.COMPRAS_GERENCIAR },
   {
     section: "Sistema",
     href: "/configuracoes",

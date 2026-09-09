@@ -1,3 +1,4 @@
+import type { EstoqueRepository, ComprasRepository } from "./estoque-types";
 // Portas (interfaces) da camada de persistencia. UI e regra de negocio
 // dependem apenas destes tipos — nunca de lib/storage/* (LocalStorage) nem
 // de lib/supabase/* diretamente. Isso e o que permite trocar o adapter
@@ -237,6 +238,8 @@ export type RecebimentoRepository = {
 };
 
 export type Repositories = {
+  estoque: EstoqueRepository;
+  compras: ComprasRepository;
   empresas: EmpresaRepository;
   usuarios: UsuarioRepository;
   sessao: SessaoRepository;

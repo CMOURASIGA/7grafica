@@ -63,6 +63,13 @@ export function removerChave(chave: string): void {
   window.localStorage.removeItem(chaveCompleta(chave));
 }
 
+/** SPEC 08: grava o agregado de estoque/compra de uma vez e propaga falha de quota. */
+export function gravarValorConfirmado<T>(chave: string, valor: T): void {
+  if (!storageDisponivel()) throw new Error("Armazenamento local indisponível. Nenhuma movimentação foi confirmada.");
+  try { window.localStorage.setItem(chaveCompleta(chave), JSON.stringify(valor)); }
+  catch { throw new Error("Não foi possível salvar. Verifique o espaço do navegador e tente novamente."); }
+}
+
 /** Remove todas as chaves do namespace 7grafica — usado por "restaurar dados de demonstracao". */
 export function limparNamespace(): void {
   if (!storageDisponivel()) return;

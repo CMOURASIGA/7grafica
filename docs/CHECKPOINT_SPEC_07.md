@@ -81,3 +81,7 @@ O download padrao do Chromium falhou na rede deste ambiente. A execucao usou Chr
 6. Entrar como Operador: conferir somente o arquivo liberado do seu Trabalho e ausencia de acoes de substituicao/liberacao.
 
 **Checkpoint entregue. Aguardar validacao. SPEC 08 nao iniciada.**
+
+## Aceite posterior do usuario
+
+SPEC 07 CONCLUIDA / VALIDADA. Funcionalidade, arquitetura, dominio, RBAC, producao e auditoria aprovados. Responsividade automatizada documentada/configurada; nenhuma regressao relevante em 01-06 identificada. CI independente ainda ausente. SPEC 08 autorizada. Este aceite supera a pausa registrada no checkpoint original.

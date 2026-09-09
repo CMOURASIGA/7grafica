@@ -5,6 +5,9 @@ import type { Papel } from "@/lib/domain/entities";
 // cada permissao nova entra como uma nova chave abaixo e, no banco (quando
 // o Supabase definitivo existir), uma nova linha em papel_permissoes.
 export const PERMISSOES = {
+  ESTOQUE_GERENCIAR: "estoque_gerenciar",
+  ESTOQUE_CONSULTAR: "estoque_consultar",
+  COMPRAS_GERENCIAR: "compras_gerenciar",
   // Foundation — administracao da empresa/conta.
   GERENCIAR_EMPRESA: "gerenciar_empresa",
   GERENCIAR_USUARIOS: "gerenciar_usuarios",
@@ -128,7 +131,10 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CAIXA_GERENCIAR,
     PERMISSOES.PRODUCAO_GERENCIAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ESTOQUE_GERENCIAR,
+    PERMISSOES.COMPRAS_GERENCIAR,
     PERMISSOES.ARQUIVOS_GERENCIAR,
+    PERMISSOES.ESTOQUE_CONSULTAR,
     PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
   gerente: [
@@ -143,7 +149,10 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.CAIXA_GERENCIAR,
     PERMISSOES.PRODUCAO_GERENCIAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ESTOQUE_GERENCIAR,
+    PERMISSOES.COMPRAS_GERENCIAR,
     PERMISSOES.ARQUIVOS_GERENCIAR,
+    PERMISSOES.ESTOQUE_CONSULTAR,
     PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
   atendente: [
@@ -153,9 +162,10 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.SOLICITACOES_GERENCIAR,
     PERMISSOES.PDV_OPERAR,
     PERMISSOES.PRODUCAO_CONSULTAR,
+    PERMISSOES.ESTOQUE_CONSULTAR,
     PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
-  operador: [PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR, PERMISSOES.PRODUCAO_CONSULTAR, PERMISSOES.ARQUIVOS_CONSULTAR],
+  operador: [PERMISSOES.ESTOQUE_CONSULTAR, PERMISSOES.CADASTROS_OPERACIONAIS_VISUALIZAR, PERMISSOES.PRODUCAO_CONSULTAR, PERMISSOES.ARQUIVOS_CONSULTAR],
 };
 
 export function papelTemPermissao(papel: Papel, permissao: Permissao): boolean {

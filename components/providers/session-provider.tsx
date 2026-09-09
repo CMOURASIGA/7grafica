@@ -75,5 +75,6 @@ export function useRepositoriosAutorizados(): Repositories {
   const { sessao } = useSessao();
   const papel = sessao?.empresaAtiva?.papel ?? null;
   const usuarioId = sessao?.usuario.id ?? null;
-  return useMemo(() => protegerRepositories(getRepositories(), papel, usuarioId), [papel, usuarioId]);
+  const empresaId = sessao?.empresaAtiva?.id ?? null;
+  return useMemo(() => protegerRepositories(getRepositories(), papel, usuarioId, empresaId), [papel, usuarioId, empresaId]);
 }

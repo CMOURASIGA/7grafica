@@ -1,6 +1,6 @@
 # SPEC 07 - Arquivos e Arte
 
-**Status: IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO DO USUARIO**
+**Status: CONCLUIDA / VALIDADA**
 
 Checkpoint: [`docs/CHECKPOINT_SPEC_07.md`](../docs/CHECKPOINT_SPEC_07.md). Commit de implementacao: `3339be4`.
 
@@ -126,3 +126,7 @@ Registrar eventos relevantes: arquivo recebido, analise, problema encontrado, no
 Executar typecheck, lint, build, Vitest e Playwright. Validar desktop/tablet/mobile. Ao concluir, relatar modelos/repositories, estrategia de arquivos, versionamento, preflight, fluxo de arte, aprovacoes, integracao com Trabalho/Workflow, RBAC, testes, limitacoes, commit e branch.
 
 **Parar ao final da SPEC 07 e aguardar validacao.**
+
+## Validacao do usuario
+
+Aprovados: funcionalidade, arquitetura local-first, dominio/versionamento, RBAC, integracao com producao e auditoria. Responsividade automatizada documentada/configurada. Nenhuma regressao relevante nas SPECs 01-06 identificada. CI independente ainda ausente. Continuidade para SPEC 08 autorizada.

@@ -42,6 +42,17 @@ type RegraAcesso = {
  * telas de Configuracoes/Auditoria.
  */
 const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
+  compras: { gerenciar: PERMISSOES.COMPRAS_GERENCIAR },
+  estoque: {
+    gerenciar: PERMISSOES.ESTOQUE_GERENCIAR, visualizar: PERMISSOES.ESTOQUE_CONSULTAR,
+    permitirSe: async ({ papel, usuarioId, metodo, args, baseRepositories }) => {
+      if (papel !== "operador" || !usuarioId || metodo !== "movimentar") return false;
+      const dados = args[1] as { trabalhoId?: string; tipo?: string };
+      if (!dados?.trabalhoId || !["consumo", "perda"].includes(dados.tipo ?? "")) return false;
+      const trabalho = await baseRepositories.trabalhos.obter(dados.trabalhoId);
+      return trabalho?.responsavelUsuarioId === usuarioId && trabalho.empresaId === args[0];
+    },
+  },
   clientes: { gerenciar: PERMISSOES.CLIENTES_GERENCIAR },
   contatos: { gerenciar: PERMISSOES.CLIENTES_GERENCIAR },
   emailsContato: { gerenciar: PERMISSOES.CLIENTES_GERENCIAR },
@@ -146,6 +157,10 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
  */
 const METODOS_LEITURA = new Set([
   "listar",
+  "listarMovimentos",
+  "listarCustosPagina",
+  "listarRecebimentos",
+  "listarContasPagar",
   "obter",
   "buscarPorEmail",
   "buscarPorDocumento",
@@ -175,6 +190,7 @@ function protegerRepositorio<T extends object>(
   papel: Papel | null,
   usuarioId: string | null,
   baseRepositories: Repositories,
+  empresaId: string | null,
 ): T {
   return new Proxy(alvo, {
     get(target, propriedade, receiver) {
@@ -190,6 +206,10 @@ function protegerRepositorio<T extends object>(
       return async (...args: unknown[]) => {
         const metodo = String(propriedade);
         const ehEscrita = !METODOS_LEITURA.has(metodo);
+        if (nome === "estoque" || nome === "compras") {
+          if (empresaId && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+          if (ehEscrita && usuarioId) args[2] = usuarioId;
+        }
         const permissaoNecessaria = ehEscrita ? regra.gerenciar : regra.visualizar ?? regra.gerenciar;
 
         if (!papel || !papelTemPermissao(papel, permissaoNecessaria)) {
@@ -231,12 +251,12 @@ function protegerRepositorio<T extends object>(
  * esconder um botao. `usuarioId` alimenta excecoes por registro (ver
  * `permitirSe` em REGRAS, ex.: Operador dono do Trabalho).
  */
-export function protegerRepositories(base: Repositories, papel: Papel | null, usuarioId: string | null = null): Repositories {
+export function protegerRepositories(base: Repositories, papel: Papel | null, usuarioId: string | null = null, empresaId: string | null = null): Repositories {
   const resultado = { ...base };
   (Object.keys(REGRAS) as Array<keyof Repositories>).forEach((chave) => {
     const regra = REGRAS[chave];
     if (!regra) return;
-    resultado[chave] = protegerRepositorio(String(chave), base[chave], regra, papel, usuarioId, base) as never;
+    resultado[chave] = protegerRepositorio(String(chave), base[chave], regra, papel, usuarioId, base, empresaId) as never;
   });
   return resultado;
 }

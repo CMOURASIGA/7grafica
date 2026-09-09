@@ -18,8 +18,8 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 | 04 | Balcao, PDV e Caixa | CONCLUIDA / VALIDADA |
 | 05 | Pedidos, Trabalhos e Kanban | CONCLUIDA / VALIDADA |
 | 06 | Producao e Equipamentos | CONCLUIDA / VALIDADA |
-| 07 | Arquivos e Arte | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
-| 08 | Estoque e Compras | PENDENTE |
+| 07 | Arquivos e Arte | CONCLUIDA / VALIDADA |
+| 08 | Estoque e Compras | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
 | 09 | Financeiro Operacional | PENDENTE |
 | 10 | Portal do Cliente | PENDENTE |
 | 11 | Entrega e Historico | PENDENTE |
@@ -45,11 +45,13 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 ## Sequencia restante
 
 ### SPEC 07 - Arquivos e Arte
-Checkpoint: `docs/CHECKPOINT_SPEC_07.md`. Implementacao concluida; validacao do usuario pendente. SPEC 08 permanece bloqueada.
+Checkpoint: `docs/CHECKPOINT_SPEC_07.md`. Aprovada pelo usuario. SPEC 08 autorizada. CI independente ainda ausente.
 
 Arquivos, versoes, preflight basico, aprovacao tecnica, aprovacao do cliente, criacao/ajuste de arte e referencia explicita da versao liberada para producao.
 
 ### SPEC 08 - Estoque e Compras
+Checkpoint: `docs/CHECKPOINT_SPEC_08.md`. Implementada e aguardando validacao do usuario. SPEC 09 nao autorizada.
+
 Estoque por material, conversao de unidade, reserva, consumo previsto x real, perdas, estoque minimo, reposicao, compras, fornecedores e recebimento.
 
 ### SPEC 09 - Financeiro Operacional
