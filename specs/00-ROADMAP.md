@@ -18,7 +18,7 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 | 04 | Balcao, PDV e Caixa | CONCLUIDA / VALIDADA |
 | 05 | Pedidos, Trabalhos e Kanban | CONCLUIDA / VALIDADA |
 | 06 | Producao e Equipamentos | CONCLUIDA / VALIDADA |
-| 07 | Arquivos e Arte | PROXIMA |
+| 07 | Arquivos e Arte | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
 | 08 | Estoque e Compras | PENDENTE |
 | 09 | Financeiro Operacional | PENDENTE |
 | 10 | Portal do Cliente | PENDENTE |
@@ -45,6 +45,8 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 ## Sequencia restante
 
 ### SPEC 07 - Arquivos e Arte
+Checkpoint: `docs/CHECKPOINT_SPEC_07.md`. Implementacao concluida; validacao do usuario pendente. SPEC 08 permanece bloqueada.
+
 Arquivos, versoes, preflight basico, aprovacao tecnica, aprovacao do cliente, criacao/ajuste de arte e referencia explicita da versao liberada para producao.
 
 ### SPEC 08 - Estoque e Compras

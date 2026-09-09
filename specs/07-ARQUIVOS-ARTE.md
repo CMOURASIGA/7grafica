@@ -1,6 +1,8 @@
 # SPEC 07 - Arquivos e Arte
 
-**Status: PROXIMA SPEC A EXECUTAR**
+**Status: IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO DO USUARIO**
+
+Checkpoint: [`docs/CHECKPOINT_SPEC_07.md`](../docs/CHECKPOINT_SPEC_07.md). Commit de implementacao: `3339be4`.
 
 > Nao iniciar SPEC 08 antes do checkpoint e validacao desta SPEC.
 

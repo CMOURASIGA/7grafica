@@ -58,12 +58,12 @@ o projeto Supabase definitivo for provisionado.
 
 ## Arquivos (SPEC 07): metadados, nunca binário
 
-A entidade `Arquivo` (`lib/domain/entities.ts`) guarda nome, extensão,
-mimeType, tamanho e metadados técnicos (páginas, dimensões) — nunca o
-conteúdo binário do arquivo em si. O preflight (`lib/domain/preflight.ts`)
-roda sobre esses metadados simulados, não sobre um arquivo real. Isso é
-deliberado: LocalStorage não é lugar para blobs grandes/base64. Quando o
-Supabase Storage definitivo existir, o adapter troca (upload real, preflight
-lendo o arquivo de verdade), mas o domínio (`Arquivo`, versionamento,
-aprovação técnica/cliente, liberação para produção) permanece o mesmo — é
-exatamente o que a camada de repositórios foi desenhada para permitir.
+A entidade `Arquivo` guarda metadados e uma referencia controlada `mock://arquivos/<uuid>` por nova versao. Nenhum binario, base64 ou object URL e persistido.
+
+O seletor de arquivo le PDFs em memoria com `pdf-lib`: numero de paginas, CropBox, rotacao, dimensoes em mm, orientacao, formato aproximado, tamanho e MIME. Limite da leitura automatica: 25 MB. PDFs invalidos, protegidos ou com dimensoes diferentes entre paginas sinalizam falha explicita. O formulario do Trabalho permite registrar metadados manualmente; essa informacao depende da conferencia humana. Nao e preflight profissional.
+
+Para outros formatos, sao lidos nome, extensao, tamanho e MIME; paginas e dimensoes permanecem desconhecidas ate conferencia. O preflight deterministico sinaliza divergencias e metadados incompletos. O conteudo continua guardado externamente, inclusive para a conferencia do cliente antes de aprovar.
+
+Novos Trabalhos congelam o requisito de arquivo do Servico. Registros legados sem esse campo continuam usando o requisito do Servico como compatibilidade, sem reset do dataset. Versoes anteriores e seus pareceres permanecem no historico. Ao receber nova versao, a anterior fica substituida: a referencia de producao anterior nao e trocada implicitamente, mas seu uso fica bloqueado ate liberacao explicita de versao apta.
+
+O reenvio para aprovacao gera novo token e invalida o anterior. Operador consulta apenas a versao explicitamente liberada e apta de Trabalhos sob sua responsabilidade. O RBAC do MVP e uma validacao funcional local, nao uma fronteira de seguranca contra manipulacao do proprio navegador. O adapter remoto futuro devera aplicar essas regras no servidor.
