@@ -14,7 +14,7 @@ test("fluxo completo do Cliente aos Relatórios preserva uma única cadeia de do
   await login(page);
 
   await page.goto("/orcamentos/orc-1");
-  await expect(page.getByText("ORC-0001")).toBeVisible();
+  await expect(page.getByText("Orcamento ORC-0001 — V1", { exact: true })).toBeVisible();
   await expect(page.getByText(/Aprovado/).first()).toBeVisible();
   await page.goto("/pedidos/pedido-1");
   await expect(page.getByText("PED-0001")).toBeVisible();

@@ -8,7 +8,7 @@ test("expedição apresenta entregas e permanece responsiva", async ({ page }, i
   await page.getByLabel("Senha", { exact: true }).fill("demo123");
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.goto("/entregas");
-  await expect(page.getByRole("heading", { name: "Entregas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entregas", level: 2 })).toBeVisible();
   await expect(page.getByText("Preparar Pedido pronto")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: info.outputPath("entregas.png"), fullPage: true });

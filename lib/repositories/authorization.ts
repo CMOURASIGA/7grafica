@@ -169,6 +169,7 @@ const METODOS_LEITURA = new Set([
   "gerar",
   "listar",
   "listarResumos",
+  "listarPorEmpresa",
   "listarMovimentos",
   "listarCustosPagina",
   "listarRecebimentos",
