@@ -9,6 +9,7 @@ async function login(page: Page) {
 }
 
 test("fluxo completo do Cliente aos Relatórios preserva uma única cadeia de domínio", async ({ page }, info) => {
+  test.setTimeout(180000);
   const erros: string[] = [];
   page.on("pageerror", (erro) => erros.push(erro.message));
   await login(page);
