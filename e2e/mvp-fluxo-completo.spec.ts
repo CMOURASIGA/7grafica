@@ -9,6 +9,7 @@ async function login(page: Page) {
 }
 
 test("fluxo completo do Cliente aos Relatórios preserva uma única cadeia de domínio", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "O fluxo integral roda uma vez; os cenários dedicados validam tablet e mobile.");
   test.setTimeout(180000);
   const erros: string[] = [];
   page.on("pageerror", (erro) => erros.push(erro.message));
