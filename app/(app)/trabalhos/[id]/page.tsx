@@ -123,7 +123,7 @@ export default function TrabalhoDetalhePage({ params }: { params: Promise<{ id: 
       const [pedidoAtual, clienteAtual, listaEventos, listaEquipe, listaAlocacoes, listaEquipamentos, avaliacaoCompatibilidade, listaArquivos, servicoAtual] = await Promise.all([
         repositories.pedidos.obter(atual.pedidoId).catch(() => null),
         atual.clienteId ? repositories.clientes.obter(atual.clienteId).catch(() => null) : Promise.resolve(null),
-        repositories.auditoria.listar(atual.empresaId, 300),
+        papel !== "operador" ? repositories.auditoria.listar(atual.empresaId, 300) : Promise.resolve([]),
         podeGerenciarTudo ? repositories.usuarios.listarPorEmpresa(atual.empresaId) : Promise.resolve([]),
         repositories.alocacoesEquipamento.listarPorTrabalho(atual.id),
         repositories.equipamentos.listar(atual.empresaId),

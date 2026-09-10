@@ -52,8 +52,8 @@ test("fluxo completo do Cliente aos Relatórios preserva uma única cadeia de do
   await expect(page.getByText(/Real: 100/)).toBeVisible();
   await page.getByRole("button", { name: /Acabamento/ }).click();
   await expect(page.getByText('Trabalho movido para "Acabamento".', { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /Expedição/ }).click();
-  await expect(page.getByText('Trabalho movido para "Expedição".', { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Conferencia final/ }).click();
+  await expect(page.getByText('Trabalho movido para "Conferencia final".', { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Concluir Trabalho", exact: true }).click();
   await expect(page.getByText("Trabalho concluído.", { exact: true })).toBeVisible();
 
