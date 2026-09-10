@@ -19,8 +19,8 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 | 05 | Pedidos, Trabalhos e Kanban | CONCLUIDA / VALIDADA |
 | 06 | Producao e Equipamentos | CONCLUIDA / VALIDADA |
 | 07 | Arquivos e Arte | CONCLUIDA / VALIDADA |
-| 08 | Estoque e Compras | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
-| 09 | Financeiro Operacional | PENDENTE |
+| 08 | Estoque e Compras | CONCLUIDA / VALIDADA |
+| 09 | Financeiro Operacional | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
 | 10 | Portal do Cliente | PENDENTE |
 | 11 | Entrega e Historico | PENDENTE |
 | 12 | Relatorios e Administracao | PENDENTE |
@@ -50,11 +50,13 @@ Checkpoint: `docs/CHECKPOINT_SPEC_07.md`. Aprovada pelo usuario. SPEC 08 autoriz
 Arquivos, versoes, preflight basico, aprovacao tecnica, aprovacao do cliente, criacao/ajuste de arte e referencia explicita da versao liberada para producao.
 
 ### SPEC 08 - Estoque e Compras
-Checkpoint: `docs/CHECKPOINT_SPEC_08.md`. Implementada e aguardando validacao do usuario. SPEC 09 nao autorizada.
+Checkpoint: `docs/CHECKPOINT_SPEC_08.md`. Aprovada pelo usuario com ressalvas de E2E e CI registradas. SPEC 09 autorizada.
 
 Estoque por material, conversao de unidade, reserva, consumo previsto x real, perdas, estoque minimo, reposicao, compras, fornecedores e recebimento.
 
 ### SPEC 09 - Financeiro Operacional
+Checkpoint: `docs/CHECKPOINT_SPEC_09.md`. Implementada e aguardando validacao do usuario. SPEC 10 nao autorizada.
+
 Recebimentos, despesas, contas a pagar/receber, caixa, resultado por periodo e por pedido, sem integracao bancaria no MVP.
 
 ### SPEC 10 - Portal do Cliente

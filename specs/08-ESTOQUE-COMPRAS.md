@@ -1,6 +1,6 @@
 # SPEC 08 - Estoque e Compras
 
-Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+Status: **CONCLUIDA / VALIDADA**.
 
 ## Objetivo
 Controlar materiais consumidos e reposicao.
@@ -42,4 +42,4 @@ Nao tentar controlar ml por pagina.
 
 Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_08.md`.
 
-**Nao iniciar a SPEC 09 sem validacao do usuario.**
+SPEC 09 autorizada pelo usuario em 10/09/2026. Ressalvas mantidas: Playwright configurado, mas sem execucao bem-sucedida no checkpoint por ausencia do Chromium; CI independente ausente. Executar a suite E2E completa antes de homologacao/producao.

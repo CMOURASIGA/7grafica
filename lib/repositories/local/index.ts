@@ -1,5 +1,6 @@
 import { criarMaterialRepositoryLocal } from "./materiais";
 import { criarEstoqueRepositoryLocal, criarComprasRepositoryLocal } from "./estoque";
+import { criarFinanceiroRepositoryLocal } from "./financeiro";
 import type { CategoriaServico, FeatureFlag, FormaPagamento, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
 import type { Repositories } from "@/lib/repositories/types";
 import { criarCrudLocal } from "@/lib/repositories/local/crud-generico";
@@ -34,6 +35,7 @@ import { criarArquivoRepositoryLocal } from "@/lib/repositories/local/arquivos";
  */
 export function criarRepositoriesLocal(): Repositories {
   return {
+    financeiro: criarFinanceiroRepositoryLocal(),
     estoque: criarEstoqueRepositoryLocal(),
     compras: criarComprasRepositoryLocal(),
     empresas: criarEmpresaRepositoryLocal(),

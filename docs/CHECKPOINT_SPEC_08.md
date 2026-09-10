@@ -59,3 +59,9 @@ O MVP nao realiza sugestao automatica de compra, conciliacao bancaria, baixa de 
 7. Recarregar a pagina e conferir persistencia do saldo, movimentos, pedido, recebimento e auditoria.
 
 **Checkpoint entregue. Aguardar validacao. SPEC 09 nao iniciada.**
+
+## Aceite posterior do usuario
+
+SPEC 08 CONCLUIDA / VALIDADA em 10/09/2026. Codigo, dominio, arquitetura local-first, estoque/reservas, conversoes, integracao com Trabalho, compras, recebimento parcial, conta a pagar de origem, toner/cartucho, RBAC, auditoria e idempotencia aprovados.
+
+Ressalvas: Playwright configurado, mas sem execucao bem-sucedida por indisponibilidade do Chromium; CI independente ausente. A suite E2E completa deve ser executada antes de homologacao/producao. SPEC 09 autorizada, com obrigacao de integrar `ContaPagarCompra`, sem recria-la em paralelo, e de justificar no checkpoint qualquer alteracao transversal nas SPECs 01 a 08.
