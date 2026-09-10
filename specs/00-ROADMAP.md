@@ -76,7 +76,7 @@ Dashboards, produtividade, prazo, margem, retrabalho, perdas, consumo, vendas, c
 
 ## Pos-SPEC 12
 
-Hardening/QA do MVP autorizado e em execucao, exclusivamente para instalar o Chromium de forma reproduzivel, executar integralmente o Playwright, corrigir regressoes, revisar RBAC e isolamento multiempresa, validar responsividade e fluxo integral e implantar CI independente no GitHub. Nenhuma SPEC 13, migracao para Supabase ou funcionalidade nova esta autorizada. Nao considerar o MVP homologavel ou pronto para producao antes do checkpoint final e da validacao do usuario.
+Hardening/QA do MVP implementado e registrado em `docs/CHECKPOINT_MVP_LOCAL_FIRST.md`. Chromium reproduzivel, CI independente, RBAC, isolamento multiempresa, responsividade e fluxo integral foram validados automaticamente. **CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO DO USUARIO.** Nenhuma SPEC 13, migracao para Supabase ou funcionalidade nova esta autorizada. O MVP ainda nao e homologavel nem pronto para producao.
 
 ## Evolucoes futuras
 

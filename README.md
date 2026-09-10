@@ -2,11 +2,14 @@
 
 Plataforma de gestao operacional para graficas.
 
+[![CI](https://github.com/CMOURASIGA/7grafica/actions/workflows/ci.yml/badge.svg?branch=claude%2F7grafica-foundation-setup-qrpydv)](https://github.com/CMOURASIGA/7grafica/actions/workflows/ci.yml)
+
 ## Documentacao
 
 - docs/00-PRODUCT-VISION.md
 - docs/01-DESIGN-SYSTEM.md
 - docs/02-DOMAIN-MODEL.md
+- docs/CHECKPOINT_MVP_LOCAL_FIRST.md
 - specs/00-ROADMAP.md
 - specs/01-FOUNDATION.md
 - specs/02-CADASTROS.md
