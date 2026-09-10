@@ -83,7 +83,7 @@ test("fluxo completo do Cliente aos Relatórios preserva uma única cadeia de do
   await page.getByLabel("Senha").fill("senha-fluxo-mvp");
   await page.getByRole("button", { name: "Ativar e entrar" }).click();
   await expect(page.getByText("PED-0001")).toBeVisible();
-  await expect(page.getByText(/Entregue/).first()).toBeVisible();
+  await expect(page.getByText(/Entrega:\s*entregue/i)).toBeVisible();
 
   await page.goto("/relatorios");
   await page.getByLabel("Início").fill("2026-01-01");
