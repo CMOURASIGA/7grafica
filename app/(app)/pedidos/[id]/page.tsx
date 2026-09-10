@@ -351,8 +351,8 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         {saldoPendente > 0 && podeOperarCaixa ? (
           <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl border border-(--border) bg-(--bg-muted) p-4 sm:grid-cols-4">
             <div>
-              <label className="workspace-label">Forma de pagamento</label>
-              <select className="workspace-select" value={formaPagamentoId} onChange={(event) => setFormaPagamentoId(event.target.value)}>
+              <label htmlFor="pedido-forma-pagamento" className="workspace-label">Forma de pagamento</label>
+              <select id="pedido-forma-pagamento" className="workspace-select" value={formaPagamentoId} onChange={(event) => setFormaPagamentoId(event.target.value)}>
                 <option value="">Selecione...</option>
                 {formasPagamento.map((forma) => (
                   <option key={forma.id} value={forma.id}>
@@ -362,13 +362,13 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
               </select>
             </div>
             <div>
-              <label className="workspace-label">Valor</label>
-              <input type="number" step="0.01" className="workspace-input" value={valorPagamento} onChange={(event) => setValorPagamento(event.target.value)} placeholder={saldoPendente.toFixed(2)} />
+              <label htmlFor="pedido-valor-pagamento" className="workspace-label">Valor</label>
+              <input id="pedido-valor-pagamento" type="number" step="0.01" className="workspace-input" value={valorPagamento} onChange={(event) => setValorPagamento(event.target.value)} placeholder={saldoPendente.toFixed(2)} />
             </div>
             {nomeForma(formaPagamentoId).toLowerCase() === "dinheiro" ? (
               <div>
-                <label className="workspace-label">Valor entregue (dinheiro)</label>
-                <input type="number" step="0.01" className="workspace-input" value={valorEntregueDinheiro} onChange={(event) => setValorEntregueDinheiro(event.target.value)} />
+                <label htmlFor="pedido-valor-entregue" className="workspace-label">Valor entregue (dinheiro)</label>
+                <input id="pedido-valor-entregue" type="number" step="0.01" className="workspace-input" value={valorEntregueDinheiro} onChange={(event) => setValorEntregueDinheiro(event.target.value)} />
               </div>
             ) : null}
             <div className="flex items-end">
