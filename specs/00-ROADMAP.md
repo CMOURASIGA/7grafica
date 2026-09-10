@@ -23,7 +23,7 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 | 09 | Financeiro Operacional | CONCLUIDA / VALIDADA |
 | 10 | Portal do Cliente | CONCLUIDA / VALIDADA |
 | 11 | Entrega e Historico | CONCLUIDA / VALIDADA |
-| 12 | Relatorios e Administracao | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
+| 12 | Relatorios e Administracao | CONCLUIDA / VALIDADA |
 
 ## Fundamentos ja consolidados
 
@@ -70,13 +70,13 @@ Checkpoint: `docs/CHECKPOINT_SPEC_11.md`. Aprovada pelo usuario com ressalvas de
 Retirada, entrega propria, motoboy, transportadora, status, comprovacao e rastreabilidade.
 
 ### SPEC 12 - Relatorios e Administracao
-Checkpoint: `docs/CHECKPOINT_SPEC_12.md`. Implementada e aguardando validacao do usuario. Nenhuma etapa posterior autorizada.
+Checkpoint: `docs/CHECKPOINT_SPEC_12.md`. Aprovada pelo usuario com ressalvas de E2E, CI e autenticacao forte para producao. Ciclo funcional das SPECs 01 a 12 concluido.
 
 Dashboards, produtividade, prazo, margem, retrabalho, perdas, consumo, vendas, conversao de orcamentos e clientes.
 
 ## Pos-SPEC 12
 
-Depois da validacao da SPEC 12, executar um ciclo separado de checkpoint geral do MVP e Hardening/QA. Esse ciclo deve instalar o Chromium, executar integralmente o Playwright, criar CI independente no GitHub e avaliar a migracao do local-first para a infraestrutura definitiva. Nao considerar o MVP homologavel ou pronto para producao antes dessa etapa.
+Hardening/QA do MVP autorizado e em execucao, exclusivamente para instalar o Chromium de forma reproduzivel, executar integralmente o Playwright, corrigir regressoes, revisar RBAC e isolamento multiempresa, validar responsividade e fluxo integral e implantar CI independente no GitHub. Nenhuma SPEC 13, migracao para Supabase ou funcionalidade nova esta autorizada. Nao considerar o MVP homologavel ou pronto para producao antes do checkpoint final e da validacao do usuario.
 
 ## Evolucoes futuras
 

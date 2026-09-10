@@ -1,6 +1,6 @@
 # SPEC 12 - Gestao, Relatorios e Administracao
 
-Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+Status: **CONCLUIDA / VALIDADA**.
 
 ## Dashboard
 - pedidos novos
@@ -42,4 +42,4 @@ Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
 
 Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_12.md`.
 
-**Nao iniciar Hardening/QA, migracao de infraestrutura ou producao sem validacao do usuario.**
+Validada pelo usuario no commit `a963c3679e06f4716c5bf904f195f60d7232094a`. Hardening/QA autorizado. Migracao de infraestrutura, producao e novas funcionalidades continuam bloqueadas ate novo checkpoint e validacao.

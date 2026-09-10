@@ -1,10 +1,10 @@
 # CHECKPOINT SPEC 12 - GESTAO, RELATORIOS E ADMINISTRACAO
 
 Data: 10/09/2026.
-Status: implementada, verificacoes tecnicas executadas, aguardando validacao do usuario.
+Status: concluida e validada pelo usuario.
 Branch: `claude/7grafica-foundation-setup-qrpydv`.
 
-**SPECs 01 a 11 permanecem concluidas/validadas. Nao iniciar Hardening/QA, migracao ou producao sem validacao do usuario.**
+**SPECs 01 a 12 estao concluidas/validadas. Hardening/QA autorizado; migracao e producao permanecem bloqueadas.**
 
 ## Arquitetura
 
@@ -94,4 +94,8 @@ Criar um ciclo separado de checkpoint geral do MVP e Hardening/QA para instalar 
 7. Confirmar que Gerente nao altera a politica administrativa de 2FA.
 8. Validar responsividade de dashboard, relatorios e configuracoes.
 
-**Checkpoint entregue. Aguardar validacao. Nenhuma etapa posterior iniciada.**
+## Validacao do usuario
+
+SPEC 12 CONCLUIDA / VALIDADA em 10/09/2026, no commit `a963c3679e06f4716c5bf904f195f60d7232094a`. Arquitetura de leitura/agregacao, indicadores, versionamento de Orcamentos, politica de 2FA, RBAC e administracao aprovados.
+
+O usuario autorizou exclusivamente o ciclo MVP CHECKPOINT + HARDENING/QA. E2E integral, CI e autenticacao forte permanecem requisitos anteriores a homologacao/producao. Nenhuma SPEC 13, migracao para Supabase ou funcionalidade nova foi autorizada.

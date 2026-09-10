@@ -15,6 +15,7 @@ const TRANSICOES: Record<StatusEntrega, StatusEntrega[]> = { pronto: ["aguardand
 export function criarEntregaRepositoryLocal(): EntregaRepository {
   return {
     async listar(empresaId) { return lerEntregas(empresaId).entregas; },
+    async listarResumos(empresaId) { const pedidos = lerColecao<Pedido>("pedidos"); return lerEntregas(empresaId).entregas.map((entrega) => ({ entrega, pedidoNumero: pedidos.find((p) => p.id === entrega.pedidoId && p.empresaId === empresaId)?.numero ?? "Pedido indisponível" })); },
     async obterPorPedido(empresaId, pedidoId) { return lerEntregas(empresaId).entregas.find((e) => e.pedidoId === pedidoId) ?? null; },
     async preparar(empresaId, dados, usuarioId) {
       const estado = lerEntregas(empresaId); if (idempotente(estado, dados.operacaoId)) return estado.entregas.find((e) => e.pedidoId === dados.pedidoId)!;

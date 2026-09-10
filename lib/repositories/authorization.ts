@@ -42,11 +42,14 @@ type RegraAcesso = {
  * telas de Configuracoes/Auditoria.
  */
 const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
+  empresas: { gerenciar: PERMISSOES.GERENCIAR_EMPRESA },
+  usuarios: { gerenciar: PERMISSOES.GERENCIAR_USUARIOS, visualizar: PERMISSOES.USUARIOS_CONSULTAR },
+  auditoria: { gerenciar: PERMISSOES.AUDITORIA_REGISTRAR, visualizar: PERMISSOES.VER_AUDITORIA },
   featureFlags: { gerenciar: PERMISSOES.GERENCIAR_FEATURE_FLAGS },
   administracao: { gerenciar: PERMISSOES.ADMINISTRACAO_SEGURANCA },
   relatorios: { gerenciar: PERMISSOES.RELATORIOS_CONSULTAR, visualizar: PERMISSOES.RELATORIOS_CONSULTAR },
   entregas: { gerenciar: PERMISSOES.ENTREGA_GERENCIAR, visualizar: PERMISSOES.ENTREGA_CONSULTAR },
-  historicoPedido: { gerenciar: PERMISSOES.ENTREGA_CONSULTAR, visualizar: PERMISSOES.ENTREGA_CONSULTAR },
+  historicoPedido: { gerenciar: PERMISSOES.SOLICITACOES_GERENCIAR, visualizar: PERMISSOES.SOLICITACOES_GERENCIAR },
   portalClienteGestao: { gerenciar: PERMISSOES.PORTAL_CLIENTE_GERENCIAR },
   financeiro: { gerenciar: PERMISSOES.FINANCEIRO_GERENCIAR, visualizar: PERMISSOES.FINANCEIRO_CONSULTAR },
   compras: { gerenciar: PERMISSOES.COMPRAS_GERENCIAR },
@@ -165,6 +168,7 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
 const METODOS_LEITURA = new Set([
   "gerar",
   "listar",
+  "listarResumos",
   "listarMovimentos",
   "listarCustosPagina",
   "listarRecebimentos",
@@ -221,6 +225,27 @@ function protegerRepositorio<T extends object>(
       return async (...args: unknown[]) => {
         const metodo = String(propriedade);
         const ehEscrita = !METODOS_LEITURA.has(metodo);
+        if (empresaId && nome === "empresas" && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+        if (empresaId && nome === "usuarios") {
+          if (metodo === "listarPorEmpresa" && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+          if (ehEscrita) {
+            const vinculos = await baseRepositories.usuarios.listarPorEmpresa(empresaId);
+            if (!vinculos.some((v) => v.id === args[0])) throw new PermissaoNegadaError("Vínculo não pertence à empresa ativa.");
+          }
+        }
+        if (empresaId && nome === "auditoria") {
+          if (metodo === "listar" && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+          if (metodo === "registrar") {
+            const evento = args[0] as { empresaId?: string; usuarioId?: string | null };
+            if (evento.empresaId !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+            evento.usuarioId = usuarioId;
+          }
+        }
+        if (empresaId && metodo === "criar" && args[0] && typeof args[0] === "object" && "empresaId" in args[0] && (args[0] as { empresaId?: string }).empresaId !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
+        if (empresaId && ["atualizar", "remover"].includes(metodo) && "obter" in target && typeof (target as { obter?: unknown }).obter === "function") {
+          const existente = await ((target as unknown as { obter(id: string): Promise<unknown> }).obter(String(args[0])));
+          if (existente && typeof existente === "object" && "empresaId" in existente && (existente as { empresaId?: string }).empresaId !== empresaId) throw new PermissaoNegadaError("Registro não pertence à empresa ativa.");
+        }
         if (nome === "estoque" || nome === "compras" || nome === "financeiro" || nome === "portalClienteGestao" || nome === "entregas" || nome === "historicoPedido" || nome === "relatorios" || nome === "administracao") {
           if (empresaId && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
           if (ehEscrita && usuarioId) args[2] = usuarioId;
@@ -244,13 +269,17 @@ function protegerRepositorio<T extends object>(
           const podeConsultar = async (arquivo: Arquivo): Promise<boolean> => {
             if (!usuarioId || !arquivo.trabalhoId) return false;
             const trabalho = await baseRepositories.trabalhos.obter(arquivo.trabalhoId);
-            return Boolean(trabalho && trabalho.responsavelUsuarioId === usuarioId && trabalho.arquivoLiberadoId === arquivo.id && !motivoArquivoInvalido(trabalho, arquivo));
+            return Boolean(trabalho && (!empresaId || trabalho.empresaId === empresaId) && arquivo.empresaId === trabalho.empresaId && trabalho.responsavelUsuarioId === usuarioId && trabalho.arquivoLiberadoId === arquivo.id && !motivoArquivoInvalido(trabalho, arquivo));
           };
           if (Array.isArray(resultado)) {
             const permitidos = await Promise.all(resultado.map((arquivo: Arquivo) => podeConsultar(arquivo)));
             return resultado.filter((_, index) => permitidos[index]);
           }
           return resultado && await podeConsultar(resultado as Arquivo) ? resultado : null;
+        }
+        if (empresaId && resultado && typeof resultado === "object") {
+          if (Array.isArray(resultado)) return resultado.filter((item) => !item || typeof item !== "object" || !("empresaId" in item) || (item as { empresaId?: string }).empresaId === empresaId);
+          if ("empresaId" in resultado && (resultado as { empresaId?: string }).empresaId !== empresaId) throw new PermissaoNegadaError("Registro não pertence à empresa ativa.");
         }
         return resultado;
       };
