@@ -81,6 +81,7 @@ export function UsuariosTable({ vinculos, onAtualizado }: { vinculos: VinculoCom
             <th className="border-b border-(--border) py-2 pr-4">Usuario</th>
             <th className="border-b border-(--border) py-2 pr-4">Papel</th>
             <th className="border-b border-(--border) py-2 pr-4">Status</th>
+            <th className="border-b border-(--border) py-2 pr-4">2FA</th>
             <th className="border-b border-(--border) py-2 pr-4" />
           </tr>
         </thead>
@@ -112,6 +113,7 @@ export function UsuariosTable({ vinculos, onAtualizado }: { vinculos: VinculoCom
                     {vinculo.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </td>
+                <td className="border-b border-(--border) py-3 pr-4"><span className={`workspace-pill ${vinculo.perfil?.mfaHabilitado ? "workspace-pill-success" : "workspace-pill-warning"}`}>{vinculo.perfil?.mfaHabilitado ? "Habilitado" : "Pendente"}</span></td>
                 <td className="border-b border-(--border) py-3 pr-4 text-right">
                   <button
                     type="button"

@@ -2,6 +2,8 @@ import type { EstoqueRepository, ComprasRepository } from "./estoque-types";
 import type { FinanceiroRepository } from "./financeiro-types";
 import type { PortalClienteGestaoRepository, PortalClientePublicoRepository } from "./portal-cliente-types";
 import type { EntregaRepository, HistoricoPedidoRepository } from "./entrega-types";
+import type { RelatoriosRepository } from "./relatorios-types";
+import type { AdministracaoRepository } from "./administracao-types";
 // Portas (interfaces) da camada de persistencia. UI e regra de negocio
 // dependem apenas destes tipos — nunca de lib/storage/* (LocalStorage) nem
 // de lib/supabase/* diretamente. Isso e o que permite trocar o adapter
@@ -241,6 +243,8 @@ export type RecebimentoRepository = {
 };
 
 export type Repositories = {
+  administracao: AdministracaoRepository;
+  relatorios: RelatoriosRepository;
   entregas: EntregaRepository;
   historicoPedido: HistoricoPedidoRepository;
   portalCliente: PortalClientePublicoRepository;

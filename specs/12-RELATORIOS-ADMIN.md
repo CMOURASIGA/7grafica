@@ -1,5 +1,7 @@
 # SPEC 12 - Gestao, Relatorios e Administracao
 
+Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+
 ## Dashboard
 - pedidos novos
 - em producao
@@ -35,3 +37,9 @@
 - 2FA opcional/obrigatorio por perfil
 - auditoria
 - parametros
+
+## Checkpoint
+
+Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_12.md`.
+
+**Nao iniciar Hardening/QA, migracao de infraestrutura ou producao sem validacao do usuario.**

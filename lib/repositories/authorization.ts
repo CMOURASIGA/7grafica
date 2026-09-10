@@ -42,6 +42,9 @@ type RegraAcesso = {
  * telas de Configuracoes/Auditoria.
  */
 const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
+  featureFlags: { gerenciar: PERMISSOES.GERENCIAR_FEATURE_FLAGS },
+  administracao: { gerenciar: PERMISSOES.ADMINISTRACAO_SEGURANCA },
+  relatorios: { gerenciar: PERMISSOES.RELATORIOS_CONSULTAR, visualizar: PERMISSOES.RELATORIOS_CONSULTAR },
   entregas: { gerenciar: PERMISSOES.ENTREGA_GERENCIAR, visualizar: PERMISSOES.ENTREGA_CONSULTAR },
   historicoPedido: { gerenciar: PERMISSOES.ENTREGA_CONSULTAR, visualizar: PERMISSOES.ENTREGA_CONSULTAR },
   portalClienteGestao: { gerenciar: PERMISSOES.PORTAL_CLIENTE_GERENCIAR },
@@ -160,6 +163,7 @@ const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
  * contrario.
  */
 const METODOS_LEITURA = new Set([
+  "gerar",
   "listar",
   "listarMovimentos",
   "listarCustosPagina",
@@ -217,7 +221,7 @@ function protegerRepositorio<T extends object>(
       return async (...args: unknown[]) => {
         const metodo = String(propriedade);
         const ehEscrita = !METODOS_LEITURA.has(metodo);
-        if (nome === "estoque" || nome === "compras" || nome === "financeiro" || nome === "portalClienteGestao" || nome === "entregas" || nome === "historicoPedido") {
+        if (nome === "estoque" || nome === "compras" || nome === "financeiro" || nome === "portalClienteGestao" || nome === "entregas" || nome === "historicoPedido" || nome === "relatorios" || nome === "administracao") {
           if (empresaId && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
           if (ehEscrita && usuarioId) args[2] = usuarioId;
         }

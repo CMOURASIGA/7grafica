@@ -1,6 +1,6 @@
 # SPEC 11 - Entrega e Historico
 
-Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+Status: **CONCLUIDA / VALIDADA**.
 
 ## Entrega
 Modalidades:
@@ -39,4 +39,4 @@ Exemplos:
 
 Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_11.md`.
 
-**Nao iniciar a SPEC 12 sem validacao do usuario.**
+Validada pelo usuario no commit `8090eb574c0e7f37e2967b3660cc8ba0b9621ea5`. SPEC 12 autorizada como camada de leitura/agregacao sobre os dominios consolidados.

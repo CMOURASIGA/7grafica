@@ -5,6 +5,8 @@ import type { Papel } from "@/lib/domain/entities";
 // cada permissao nova entra como uma nova chave abaixo e, no banco (quando
 // o Supabase definitivo existir), uma nova linha em papel_permissoes.
 export const PERMISSOES = {
+  ADMINISTRACAO_SEGURANCA: "administracao_seguranca",
+  RELATORIOS_CONSULTAR: "relatorios_consultar",
   ENTREGA_GERENCIAR: "entrega_gerenciar",
   ENTREGA_CONSULTAR: "entrega_consultar",
   PORTAL_CLIENTE_GERENCIAR: "portal_cliente_gerenciar",
@@ -122,6 +124,8 @@ export type Permissao = (typeof PERMISSOES)[keyof typeof PERMISSOES];
  */
 export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
   admin: [
+    PERMISSOES.ADMINISTRACAO_SEGURANCA,
+    PERMISSOES.RELATORIOS_CONSULTAR,
     PERMISSOES.GERENCIAR_EMPRESA,
     PERMISSOES.GERENCIAR_USUARIOS,
     PERMISSOES.GERENCIAR_WHITELABEL,
@@ -148,6 +152,7 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.ARQUIVOS_CONSULTAR,
   ],
   gerente: [
+    PERMISSOES.RELATORIOS_CONSULTAR,
     PERMISSOES.GERENCIAR_USUARIOS,
     PERMISSOES.VER_AUDITORIA,
     PERMISSOES.FINANCEIRO_GERENCIAR,

@@ -4,6 +4,8 @@ import { criarFinanceiroRepositoryLocal } from "./financeiro";
 import { criarPortalClienteGestaoRepositoryLocal, criarPortalClientePublicoRepositoryLocal } from "./portal-cliente";
 import { criarEntregaRepositoryLocal } from "./entregas";
 import { criarHistoricoPedidoRepositoryLocal } from "./historico-pedido";
+import { criarRelatoriosRepositoryLocal } from "./relatorios";
+import { criarAdministracaoRepositoryLocal } from "./administracao";
 import type { CategoriaServico, FeatureFlag, FormaPagamento, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
 import type { Repositories } from "@/lib/repositories/types";
 import { criarCrudLocal } from "@/lib/repositories/local/crud-generico";
@@ -38,6 +40,8 @@ import { criarArquivoRepositoryLocal } from "@/lib/repositories/local/arquivos";
  */
 export function criarRepositoriesLocal(): Repositories {
   return {
+    administracao: criarAdministracaoRepositoryLocal(),
+    relatorios: criarRelatoriosRepositoryLocal(),
     entregas: criarEntregaRepositoryLocal(),
     historicoPedido: criarHistoricoPedidoRepositoryLocal(),
     portalCliente: criarPortalClientePublicoRepositoryLocal(),

@@ -1,10 +1,10 @@
 # CHECKPOINT SPEC 11 - ENTREGA E HISTORICO
 
 Data: 10/09/2026.
-Status: implementada, verificacoes tecnicas executadas, aguardando validacao do usuario.
+Status: concluida e validada pelo usuario.
 Branch: `claude/7grafica-foundation-setup-qrpydv`.
 
-**Nao iniciar a SPEC 12 sem validacao do usuario. SPECs 01 a 10 permanecem concluidas/validadas.**
+Validada diretamente na branch pelo usuario no commit `8090eb574c0e7f37e2967b3660cc8ba0b9621ea5`. SPEC 12 autorizada. As ressalvas de Chromium e CI independente permanecem registradas.
 
 ## Arquitetura local-first
 
@@ -64,4 +64,4 @@ Nenhuma regressao real nas SPECs 01 a 10 foi encontrada.
 8. Validar operacao por Atendente, consulta por Operador e isolamento entre empresas.
 9. Conferir eventos em `/auditoria`.
 
-**Checkpoint entregue. Aguardar validacao. SPEC 12 nao iniciada.**
+**SPEC 11 concluida/validada. SPEC 12 autorizada.**

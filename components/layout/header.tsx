@@ -9,6 +9,7 @@ import type { Papel } from "@/lib/domain/entities";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Inicio",
+  "/relatorios": "Relatorios",
   "/cadastros": "Cadastros",
   "/cadastros/clientes": "Clientes",
   "/cadastros/fornecedores": "Fornecedores",

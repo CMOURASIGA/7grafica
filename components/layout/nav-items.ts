@@ -15,6 +15,7 @@ export type NavItem = {
 // financeiro, portal) entra aqui antes da respectiva SPEC.
 export const NAV_ITEMS: NavItem[] = [
   { section: "Principal", href: "/", label: "Inicio", icon: "home" },
+  { section: "Principal", href: "/relatorios", label: "Relatorios", icon: "home", permissaoRequerida: PERMISSOES.RELATORIOS_CONSULTAR },
   { section: "Principal", href: "/cadastros", label: "Cadastros", icon: "cadastros" },
   {
     section: "Atendimento",

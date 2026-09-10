@@ -10,6 +10,8 @@ import { restaurarDadosDemo } from "@/lib/mock/reset";
 import type { VinculoComPerfil } from "@/lib/repositories/types";
 import { EmpresaForm } from "./empresa-form";
 import { UsuariosTable } from "./usuarios-table";
+import { SegurancaAdmin } from "./seguranca-admin";
+import { ParametrosAdmin } from "./parametros-admin";
 
 export default function ConfiguracoesPage() {
   const repositories = useRepositories();
@@ -80,6 +82,17 @@ export default function ConfiguracoesPage() {
             <UsuariosTable vinculos={vinculos} onAtualizado={carregarUsuarios} />
           </div>
         </SurfaceCard>
+      ) : null}
+
+      {papelTemPermissao(empresa.papel, PERMISSOES.ADMINISTRACAO_SEGURANCA) ? (
+        <SurfaceCard className="p-5">
+          <SectionLabel>Segurança, perfis e permissões</SectionLabel>
+          <div className="mt-4"><SegurancaAdmin /></div>
+        </SurfaceCard>
+      ) : null}
+
+      {papelTemPermissao(empresa.papel, PERMISSOES.GERENCIAR_FEATURE_FLAGS) ? (
+        <SurfaceCard className="p-5"><SectionLabel>Parâmetros funcionais</SectionLabel><div className="mt-4"><ParametrosAdmin /></div></SurfaceCard>
       ) : null}
 
       {!podeGerenciarEmpresa && !podeGerenciarUsuarios ? (
