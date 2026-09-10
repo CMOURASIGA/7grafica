@@ -2,6 +2,7 @@ import type { Arquivo, Cliente, Contato, EmailContato, Orcamento, Pedido, Recebi
 import { estadoPortalVazio, type EstadoPortalCliente, type PainelPortalCliente, type PedidoPortal, type SessaoPortalCliente } from "@/lib/domain/portal-cliente";
 import type { PortalClienteGestaoRepository, PortalClientePublicoRepository } from "@/lib/repositories/portal-cliente-types";
 import { gerarId, gravarValorConfirmado, lerColecao, lerValor, removerChave } from "@/lib/storage/local-storage-client";
+import { lerEntregas } from "./entregas";
 
 const CHAVE_SESSAO = "portal_cliente_sessao";
 const chave = (empresaId: string) => `portal_cliente_v1:${empresaId}`;
@@ -23,7 +24,8 @@ function montarPedido(pedido: Pedido): PedidoPortal {
   const arquivosLiberados = lerColecao<Arquivo>("arquivos").filter((a) => a.pedidoId === pedido.id && idsLiberados.has(a.id));
   const orcamento = pedido.orcamentoId ? lerColecao<Orcamento>("orcamentos").find((o) => o.id === pedido.orcamentoId && o.empresaId === pedido.empresaId) ?? null : null;
   const recebido = Math.round(recebimentos.reduce((s, r) => s + r.valor, 0) * 100) / 100;
-  return { pedido, recebimentos, trabalhos, arquivosLiberados, orcamento, recebido, saldo: Math.max(0, Math.round((pedido.valorTotal - recebido) * 100) / 100) };
+  const entrega = lerEntregas(pedido.empresaId).entregas.find((e) => e.pedidoId === pedido.id) ?? null;
+  return { pedido, recebimentos, trabalhos, arquivosLiberados, orcamento, entrega, recebido, saldo: Math.max(0, Math.round((pedido.valorTotal - recebido) * 100) / 100) };
 }
 function painelDaSessao(sessao: SessaoPortalCliente): PainelPortalCliente {
   const pedidos = lerColecao<Pedido>("pedidos").filter((p) => p.empresaId === sessao.empresaId && p.clienteId === sessao.clienteId).map(montarPedido);

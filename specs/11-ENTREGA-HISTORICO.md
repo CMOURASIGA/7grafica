@@ -1,5 +1,7 @@
 # SPEC 11 - Entrega e Historico
 
+Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+
 ## Entrega
 Modalidades:
 - retirada
@@ -32,3 +34,9 @@ Exemplos:
 - pagamento registrado
 - pronto
 - entregue
+
+## Checkpoint
+
+Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_11.md`.
+
+**Nao iniciar a SPEC 12 sem validacao do usuario.**

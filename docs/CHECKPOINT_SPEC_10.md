@@ -1,10 +1,10 @@
 # CHECKPOINT SPEC 10 - PORTAL DO CLIENTE
 
 Data: 10/09/2026.
-Status: implementada, verificacoes tecnicas aprovadas, aguardando validacao do usuario.
+Status: concluida e validada pelo usuario.
 Branch: `claude/7grafica-foundation-setup-qrpydv`.
 
-**Nao iniciar a SPEC 11 sem validacao do usuario. SPECs 01 a 09 permanecem concluidas/validadas.**
+Validada diretamente na branch pelo usuario no commit `882ce6177901ebb077e1935783f283f83b27d839`. SPEC 11 autorizada. As ressalvas de Chromium, CI independente e autenticacao de producao permanecem registradas.
 
 ## Arquitetura e seguranca
 
@@ -78,4 +78,4 @@ Nenhuma regra financeira, operacional, de estoque ou de producao foi reimplement
 8. Entrar como Atendente e Operador e confirmar ausencia da gestao de Portal.
 9. Conferir eventos em `/auditoria`.
 
-**Checkpoint entregue. Aguardar validacao. SPEC 11 nao iniciada.**
+**SPEC 10 concluida/validada. SPEC 11 autorizada.**

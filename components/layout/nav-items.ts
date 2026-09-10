@@ -62,6 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
   { section: "Producao", href: "/compras", label: "Compras", icon: "pedido", permissaoRequerida: PERMISSOES.COMPRAS_GERENCIAR },
   { section: "Financeiro", href: "/financeiro", label: "Financeiro", icon: "caixa", permissaoRequerida: PERMISSOES.FINANCEIRO_CONSULTAR },
   { section: "Atendimento", href: "/portal-clientes", label: "Portal do cliente", icon: "pedido", permissaoRequerida: PERMISSOES.PORTAL_CLIENTE_GERENCIAR },
+  { section: "Producao", href: "/entregas", label: "Entregas", icon: "pedido", permissaoRequerida: PERMISSOES.ENTREGA_CONSULTAR },
   {
     section: "Sistema",
     href: "/configuracoes",

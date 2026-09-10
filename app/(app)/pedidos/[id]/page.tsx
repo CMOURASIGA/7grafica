@@ -82,7 +82,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
         atual.clienteId ? repositories.clientes.obter(atual.clienteId) : Promise.resolve(null),
         repositories.recebimentos.listarPorPedido(atual.id),
         repositories.formasPagamento.listar(atual.empresaId),
-        repositories.auditoria.listar(atual.empresaId, 200),
+        repositories.historicoPedido.listar(atual.empresaId, atual.id),
         repositories.caixa.obterAberto(atual.empresaId).catch(() => null),
         podeVerProducao ? repositories.trabalhos.listarPorPedido(atual.id) : Promise.resolve([]),
         podeGerarTrabalho ? repositories.workflows.listar(atual.empresaId) : Promise.resolve([]),
@@ -92,7 +92,7 @@ export default function PedidoDetalhePage({ params }: { params: Promise<{ id: st
       setCliente(clienteAtual);
       setRecebimentos(listaRecebimentos);
       setFormasPagamento(listaFormas.filter((forma) => forma.ativo));
-      setEventos(listaEventos.filter((evento) => evento.entidade === "pedidos" && evento.entidadeId === atual.id));
+      setEventos(listaEventos);
       setCaixaAbertoId(caixaAberto?.id ?? null);
       setTrabalhos(listaTrabalhos);
       setWorkflows(listaWorkflows.filter((workflow) => workflow.ativo));

@@ -1,6 +1,6 @@
 # SPEC 10 - Portal do Cliente
 
-Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+Status: **CONCLUIDA / VALIDADA**.
 
 ## Objetivo
 Permitir acompanhamento simples e seguro.
@@ -35,4 +35,4 @@ Permite consultar um pedido especifico sem conta.
 
 Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_10.md`.
 
-**Nao iniciar a SPEC 11 sem validacao do usuario.**
+Validada pelo usuario no commit `882ce6177901ebb077e1935783f283f83b27d839`. SPEC 11 autorizada, preservando os dominios consolidados das SPECs 01 a 10.
