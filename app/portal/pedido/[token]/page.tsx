@@ -36,13 +36,16 @@ export default function ComprovantePedidoPage({ params }: { params: Promise<{ to
 
   useEffect(() => {
     void (async () => {
-      const atual = await repositories.pedidos.buscarPorToken(token);
+      const acessoSeguro = await repositories.portalCliente.buscarPedidoPorToken(token);
+      // Compatibilidade com comprovantes emitidos nas SPECs 03/04. Novos
+      // links do Portal usam TokenPedidoPortal com expiracao e revogacao.
+      const atual = acessoSeguro?.pedido ?? await repositories.pedidos.buscarPorToken(token);
       setPedido(atual);
       if (atual) {
         const [empresaAtual, clienteAtual, listaRecebimentos, listaFormas] = await Promise.all([
           repositories.empresas.obter(atual.empresaId),
           atual.clienteId ? repositories.clientes.obter(atual.clienteId) : Promise.resolve(null),
-          repositories.recebimentos.listarPorPedido(atual.id),
+          acessoSeguro ? Promise.resolve(acessoSeguro.recebimentos) : repositories.recebimentos.listarPorPedido(atual.id),
           repositories.formasPagamento.listar(atual.empresaId),
         ]);
         setEmpresa(empresaAtual);

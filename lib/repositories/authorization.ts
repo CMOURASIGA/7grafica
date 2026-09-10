@@ -42,6 +42,7 @@ type RegraAcesso = {
  * telas de Configuracoes/Auditoria.
  */
 const REGRAS: Partial<Record<keyof Repositories, RegraAcesso>> = {
+  portalClienteGestao: { gerenciar: PERMISSOES.PORTAL_CLIENTE_GERENCIAR },
   financeiro: { gerenciar: PERMISSOES.FINANCEIRO_GERENCIAR, visualizar: PERMISSOES.FINANCEIRO_CONSULTAR },
   compras: { gerenciar: PERMISSOES.COMPRAS_GERENCIAR },
   estoque: {
@@ -164,6 +165,8 @@ const METODOS_LEITURA = new Set([
   "listarContasPagar",
   "listarContasReceber",
   "listarDespesas",
+  "listarConvites",
+  "listarTokensPedido",
   "obterResultadoPedido",
   "obterResumo",
   "obter",
@@ -211,7 +214,7 @@ function protegerRepositorio<T extends object>(
       return async (...args: unknown[]) => {
         const metodo = String(propriedade);
         const ehEscrita = !METODOS_LEITURA.has(metodo);
-        if (nome === "estoque" || nome === "compras" || nome === "financeiro") {
+        if (nome === "estoque" || nome === "compras" || nome === "financeiro" || nome === "portalClienteGestao") {
           if (empresaId && args[0] !== empresaId) throw new PermissaoNegadaError("Empresa diferente da sessão ativa.");
           if (ehEscrita && usuarioId) args[2] = usuarioId;
         }

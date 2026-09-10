@@ -5,6 +5,7 @@ import type { Papel } from "@/lib/domain/entities";
 // cada permissao nova entra como uma nova chave abaixo e, no banco (quando
 // o Supabase definitivo existir), uma nova linha em papel_permissoes.
 export const PERMISSOES = {
+  PORTAL_CLIENTE_GERENCIAR: "portal_cliente_gerenciar",
   FINANCEIRO_GERENCIAR: "financeiro_gerenciar",
   FINANCEIRO_CONSULTAR: "financeiro_consultar",
   ESTOQUE_GERENCIAR: "estoque_gerenciar",
@@ -126,6 +127,7 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.VER_AUDITORIA,
     PERMISSOES.FINANCEIRO_GERENCIAR,
     PERMISSOES.FINANCEIRO_CONSULTAR,
+    PERMISSOES.PORTAL_CLIENTE_GERENCIAR,
     PERMISSOES.CLIENTES_GERENCIAR,
     PERMISSOES.CADASTROS_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,
@@ -146,6 +148,7 @@ export const MATRIZ_PAPEIS: Record<Papel, Permissao[]> = {
     PERMISSOES.VER_AUDITORIA,
     PERMISSOES.FINANCEIRO_GERENCIAR,
     PERMISSOES.FINANCEIRO_CONSULTAR,
+    PERMISSOES.PORTAL_CLIENTE_GERENCIAR,
     PERMISSOES.CLIENTES_GERENCIAR,
     PERMISSOES.CADASTROS_GERENCIAR,
     PERMISSOES.CADASTROS_COMERCIAIS_VISUALIZAR,

@@ -1,5 +1,7 @@
 # SPEC 10 - Portal do Cliente
 
+Status: **IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO**.
+
 ## Objetivo
 Permitir acompanhamento simples e seguro.
 
@@ -28,3 +30,9 @@ Permite consultar um pedido especifico sem conta.
 - conta pode ser criada posteriormente
 - pedidos anteriores vinculados ao cliente podem ser apresentados apos autenticacao conforme regra de seguranca
 - token publico deve ser aleatorio, expirar/revogar quando necessario e nao expor IDs sequenciais
+
+## Checkpoint
+
+Implementacao e verificacoes registradas em `docs/CHECKPOINT_SPEC_10.md`.
+
+**Nao iniciar a SPEC 11 sem validacao do usuario.**

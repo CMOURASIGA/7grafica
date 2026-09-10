@@ -71,3 +71,9 @@ Sem conciliacao bancaria, adquirente, Pix API, integracao bancaria, emissao de N
 8. Conferir os eventos financeiros em `/auditoria`.
 
 **Checkpoint entregue. Aguardar validacao. SPEC 10 nao iniciada.**
+
+## Aceite posterior do usuario
+
+SPEC 09 CONCLUIDA / VALIDADA em 10/09/2026. Arquitetura, integracao com Pedido/Recebimento/Caixa/Compras, resultado de caixa, resultado por Pedido, RBAC e isolamento aprovados. A `ContaPagarCompra` permanece como titulo original e a SPEC 09 registra somente sua liquidacao.
+
+Ressalvas mantidas: Chromium indisponivel, E2E nao executado com sucesso e CI independente ausente. O sistema nao deve seguir para homologacao/producao antes de resolver essas dividas. SPEC 10 autorizada sobre os repositories consolidados das SPECs 01 a 09.

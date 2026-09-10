@@ -20,8 +20,8 @@ A arquitetura Supabase da Foundation, migrations, RLS e RBAC permanece preparada
 | 06 | Producao e Equipamentos | CONCLUIDA / VALIDADA |
 | 07 | Arquivos e Arte | CONCLUIDA / VALIDADA |
 | 08 | Estoque e Compras | CONCLUIDA / VALIDADA |
-| 09 | Financeiro Operacional | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
-| 10 | Portal do Cliente | PENDENTE |
+| 09 | Financeiro Operacional | CONCLUIDA / VALIDADA |
+| 10 | Portal do Cliente | IMPLEMENTADA / CHECKPOINT ENTREGUE / AGUARDANDO VALIDACAO |
 | 11 | Entrega e Historico | PENDENTE |
 | 12 | Relatorios e Administracao | PENDENTE |
 
@@ -55,11 +55,13 @@ Checkpoint: `docs/CHECKPOINT_SPEC_08.md`. Aprovada pelo usuario com ressalvas de
 Estoque por material, conversao de unidade, reserva, consumo previsto x real, perdas, estoque minimo, reposicao, compras, fornecedores e recebimento.
 
 ### SPEC 09 - Financeiro Operacional
-Checkpoint: `docs/CHECKPOINT_SPEC_09.md`. Implementada e aguardando validacao do usuario. SPEC 10 nao autorizada.
+Checkpoint: `docs/CHECKPOINT_SPEC_09.md`. Aprovada pelo usuario com ressalvas de E2E e CI registradas. SPEC 10 autorizada.
 
 Recebimentos, despesas, contas a pagar/receber, caixa, resultado por periodo e por pedido, sem integracao bancaria no MVP.
 
 ### SPEC 10 - Portal do Cliente
+Checkpoint: `docs/CHECKPOINT_SPEC_10.md`. Implementada e aguardando validacao do usuario. SPEC 11 nao autorizada.
+
 Login opcional, token seguro por recurso/pedido, historico, acompanhamento, orcamentos, aprovacoes, arquivos, pagamentos e entrega.
 
 ### SPEC 11 - Entrega e Historico
