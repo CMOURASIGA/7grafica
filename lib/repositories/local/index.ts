@@ -1,0 +1,89 @@
+import { criarMaterialRepositoryLocal } from "./materiais";
+import { criarEstoqueRepositoryLocal, criarComprasRepositoryLocal } from "./estoque";
+import { criarFinanceiroRepositoryLocal } from "./financeiro";
+import { criarPortalClienteGestaoRepositoryLocal, criarPortalClientePublicoRepositoryLocal } from "./portal-cliente";
+import { criarEntregaRepositoryLocal } from "./entregas";
+import { criarHistoricoPedidoRepositoryLocal } from "./historico-pedido";
+import { criarRelatoriosRepositoryLocal } from "./relatorios";
+import { criarAdministracaoRepositoryLocal } from "./administracao";
+import type { CategoriaServico, FeatureFlag, FormaPagamento, Servico, UnidadeMedida, Workflow, Fornecedor } from "@/lib/domain/entities";
+import type { Repositories } from "@/lib/repositories/types";
+import { criarCrudLocal } from "@/lib/repositories/local/crud-generico";
+import { criarEmpresaRepositoryLocal } from "@/lib/repositories/local/empresas";
+import { criarUsuarioRepositoryLocal } from "@/lib/repositories/local/usuarios";
+import { criarSessaoRepositoryLocal } from "@/lib/repositories/local/sessao";
+import { criarAuditoriaRepositoryLocal } from "@/lib/repositories/local/auditoria";
+import { criarClienteRepositoryLocal } from "@/lib/repositories/local/clientes";
+import { criarContatoRepositoryLocal } from "@/lib/repositories/local/contatos";
+import { criarEmailContatoRepositoryLocal } from "@/lib/repositories/local/emails-contato";
+import { criarConversaoUnidadeRepositoryLocal } from "@/lib/repositories/local/conversoes-unidade";
+import { criarCapacidadeEquipamentoRepositoryLocal } from "@/lib/repositories/local/capacidades-equipamento";
+import { criarEtapaWorkflowRepositoryLocal } from "@/lib/repositories/local/etapas-workflow";
+import { criarEmailRecebidoRepositoryLocal } from "@/lib/repositories/local/emails-recebidos";
+import { criarSolicitacaoRepositoryLocal } from "@/lib/repositories/local/solicitacoes";
+import { criarOrcamentoRepositoryLocal } from "@/lib/repositories/local/orcamentos";
+import { criarEmailEnviadoRepositoryLocal } from "@/lib/repositories/local/emails-enviados";
+import { criarPedidoRepositoryLocal } from "@/lib/repositories/local/pedidos";
+import { criarCaixaRepositoryLocal } from "@/lib/repositories/local/caixa";
+import { criarMovimentoCaixaRepositoryLocal } from "@/lib/repositories/local/movimentos-caixa";
+import { criarRecebimentoRepositoryLocal } from "@/lib/repositories/local/recebimentos";
+import { criarTrabalhoRepositoryLocal } from "@/lib/repositories/local/trabalhos";
+import { criarEquipamentoRepositoryLocal } from "@/lib/repositories/local/equipamentos";
+import { criarAlocacaoEquipamentoRepositoryLocal } from "@/lib/repositories/local/alocacoes-equipamento";
+import { criarArquivoRepositoryLocal } from "@/lib/repositories/local/arquivos";
+
+/**
+ * Bundle completo do adapter LocalStorage. E o unico lugar que sabe que os
+ * cadastros "simples" (fornecedores, servicos, materiais, unidades,
+ * equipamentos, formas de pagamento, workflows, feature flags) usam o CRUD
+ * generico — cada um continua com seu proprio tipo e chave de storage.
+ */
+export function criarRepositoriesLocal(): Repositories {
+  return {
+    administracao: criarAdministracaoRepositoryLocal(),
+    relatorios: criarRelatoriosRepositoryLocal(),
+    entregas: criarEntregaRepositoryLocal(),
+    historicoPedido: criarHistoricoPedidoRepositoryLocal(),
+    portalCliente: criarPortalClientePublicoRepositoryLocal(),
+    portalClienteGestao: criarPortalClienteGestaoRepositoryLocal(),
+    financeiro: criarFinanceiroRepositoryLocal(),
+    estoque: criarEstoqueRepositoryLocal(),
+    compras: criarComprasRepositoryLocal(),
+    empresas: criarEmpresaRepositoryLocal(),
+    usuarios: criarUsuarioRepositoryLocal(),
+    sessao: criarSessaoRepositoryLocal(),
+    auditoria: criarAuditoriaRepositoryLocal(),
+    featureFlags: criarCrudLocal<FeatureFlag, Omit<FeatureFlag, "id">>("feature_flags", "flag"),
+
+    clientes: criarClienteRepositoryLocal(),
+    contatos: criarContatoRepositoryLocal(),
+    emailsContato: criarEmailContatoRepositoryLocal(),
+    fornecedores: criarCrudLocal<Fornecedor, Omit<Fornecedor, "id">>("fornecedores", "fornecedor"),
+    categoriasServico: criarCrudLocal<CategoriaServico, Omit<CategoriaServico, "id">>("categorias_servico", "cat-serv"),
+    servicos: criarCrudLocal<Servico, Omit<Servico, "id">>("servicos", "servico"),
+    unidadesMedida: criarCrudLocal<UnidadeMedida, Omit<UnidadeMedida, "id">>("unidades_medida", "unidade"),
+    materiais: criarMaterialRepositoryLocal(),
+    conversoesUnidade: criarConversaoUnidadeRepositoryLocal(),
+    equipamentos: criarEquipamentoRepositoryLocal(),
+    capacidadesEquipamento: criarCapacidadeEquipamentoRepositoryLocal(),
+    formasPagamento: criarCrudLocal<FormaPagamento, Omit<FormaPagamento, "id">>("formas_pagamento", "fp"),
+    workflows: criarCrudLocal<Workflow, Omit<Workflow, "id">>("workflows", "workflow"),
+    etapasWorkflow: criarEtapaWorkflowRepositoryLocal(),
+
+    emailsRecebidos: criarEmailRecebidoRepositoryLocal(),
+    solicitacoes: criarSolicitacaoRepositoryLocal(),
+    orcamentos: criarOrcamentoRepositoryLocal(),
+    emailsEnviados: criarEmailEnviadoRepositoryLocal(),
+    pedidos: criarPedidoRepositoryLocal(),
+
+    caixa: criarCaixaRepositoryLocal(),
+    movimentosCaixaManual: criarMovimentoCaixaRepositoryLocal(),
+    recebimentos: criarRecebimentoRepositoryLocal(),
+
+    trabalhos: criarTrabalhoRepositoryLocal(),
+
+    alocacoesEquipamento: criarAlocacaoEquipamentoRepositoryLocal(),
+
+    arquivos: criarArquivoRepositoryLocal(),
+  };
+}
