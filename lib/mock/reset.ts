@@ -1,4 +1,5 @@
-import { gravarColecao, gravarValor, lerValor, limparNamespace } from "@/lib/storage/local-storage-client";
+import { gravarColecao, gravarValor, lerColecao, lerValor, limparNamespace } from "@/lib/storage/local-storage-client";
+import type { Empresa } from "@/lib/domain/entities";
 import { CHAVES_USUARIOS } from "@/lib/repositories/local/usuarios";
 import { CHAVES_SESSAO } from "@/lib/repositories/local/sessao";
 import {
@@ -13,6 +14,7 @@ import {
   emailsEnviadosSeed,
   emailsRecebidosSeed,
   empresasSeed,
+  LOGO_DEMO_LEGADO,
   empresaUsuariosSeed,
   equipamentosSeed,
   etapasWorkflowSeed,
@@ -74,11 +76,26 @@ export function restaurarDadosDemo(): void {
 // .exigeArquivoLiberado, Trabalho.arquivoLiberadoId e a colecao "arquivos" —
 // sem o reseed, sessoes antigas leriam esses campos como undefined.
 const CHAVE_BOOTSTRAP = "bootstrap_v6";
+const CHAVE_MIGRACAO_WHITELABEL = "migracao_whitelabel_v1";
+
+function removerLogoDemoLegado(): void {
+  if (lerValor<boolean>(CHAVE_MIGRACAO_WHITELABEL)) return;
+  const empresas = lerColecao<Empresa>(CHAVES_SESSAO.empresas);
+  const migradas = empresas.map((empresa) =>
+    empresa.logoUrl === LOGO_DEMO_LEGADO
+      ? { ...empresa, logoUrl: null, corPrimaria: null, corDestaque: null }
+      : empresa,
+  );
+  gravarColecao(CHAVES_SESSAO.empresas, migradas);
+  gravarValor(CHAVE_MIGRACAO_WHITELABEL, true);
+}
 
 /** Semeia os dados de demonstracao apenas na primeira vez que o app roda neste navegador. */
 export function garantirDadosDemo(): void {
   if (typeof window === "undefined") return;
-  if (lerValor<boolean>(CHAVE_BOOTSTRAP)) return;
-  restaurarDadosDemo();
-  gravarValor(CHAVE_BOOTSTRAP, true);
+  if (!lerValor<boolean>(CHAVE_BOOTSTRAP)) {
+    restaurarDadosDemo();
+    gravarValor(CHAVE_BOOTSTRAP, true);
+  }
+  removerLogoDemoLegado();
 }

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import type { Papel } from "@/lib/domain/entities";
-import type { IdentidadeCanto } from "@/lib/whitelabel";
+import { aplicarIdentidadeVisual, type IdentidadeCanto } from "@/lib/whitelabel";
 
 export type AppShellProps = {
   children: React.ReactNode;
@@ -22,6 +22,10 @@ export function AppShell({ children, identidade, email, papel, empresaNome }: Ap
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    aplicarIdentidadeVisual(identidade);
+  }, [identidade]);
 
   return (
     <div className="min-h-screen bg-(--bg-page) md:flex md:items-stretch">

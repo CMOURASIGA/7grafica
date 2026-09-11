@@ -32,9 +32,9 @@ import type {
 
 export const EMPRESA_DEMO_ID = "empresa-1";
 
-// Marca simples via SVG inline (data URI): prova que whitelabel funciona
-// offline, sem depender de rede para uma URL externa.
-const LOGO_DEMO =
+// Emblema temporario usado antes da rotina completa de whitelabel. Exportado
+// apenas para a migracao local remover o placeholder de navegadores existentes.
+export const LOGO_DEMO_LEGADO =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" rx="18" fill="#7a1f2b"/><text x="60" y="70" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#f4d35e" text-anchor="middle">GNE</text></svg>`,
@@ -45,9 +45,9 @@ export const empresasSeed: Empresa[] = [
     id: EMPRESA_DEMO_ID,
     nome: "Grafica Nova Era",
     slug: "grafica-nova-era",
-    logoUrl: LOGO_DEMO,
-    corPrimaria: "#7a1f2b",
-    corDestaque: "#f4d35e",
+    logoUrl: null,
+    corPrimaria: null,
+    corDestaque: null,
     ativo: true,
     criadoEm: "2026-01-06T09:00:00.000Z",
   },
